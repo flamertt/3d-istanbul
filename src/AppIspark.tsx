@@ -27,6 +27,7 @@ import {
 import type { GeoResult } from "./lib/geocode";
 import { MapControls } from "./components/ui/map-ui";
 import { LayerControl } from "./components/LayerControl";
+import { IstanbulClock } from "./components/IstanbulClock";
 import type { TurkeyOverlayFlags } from "./hooks/useTurkeyOverlays";
 import { useEffect } from "react";
 import type { TurkeyPoiPoint } from "./layers/turkeyOverlayLayers";
@@ -259,10 +260,10 @@ function AppIspark() {
   const lots = isparkEnabled ? ispark.lots : [];
 
   const DARK_MATTER_URL = "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json";
-  const LIGHT_POSITRON_URL = "https://basemaps.cartocdn.com/gl/positron-gl-style/style.json";
+  const LIGHT_ALIDADE_URL = "https://tiles.stadiamaps.com/styles/alidade_smooth.json";
 
   const [mapTheme, setMapTheme] = useState<"light" | "dark">("dark");
-  const mapStyleUrl = mapTheme === "light" ? LIGHT_POSITRON_URL : DARK_MATTER_URL;
+  const mapStyleUrl = mapTheme === "light" ? LIGHT_ALIDADE_URL : DARK_MATTER_URL;
 
   const toggleFlag = (key: keyof TurkeyOverlayFlags) => {
     setOverlayFlags((s) => ({ ...s, [key]: !s[key] }));
@@ -309,7 +310,8 @@ function AppIspark() {
       <Header
         generated={ispark.lastUpdated}
         themeToggle={
-          <div className="flex items-center gap-2">
+          <div className="flex items-end gap-3">
+            <div className="flex flex-col gap-2">
             <CameraControlDropdown
               bearingLocked={bearingLocked}
               cameraLocked={cameraLocked}
@@ -329,11 +331,13 @@ function AppIspark() {
             >
               {mapTheme === "light" ? <Moon size={18} className="group-hover:rotate-12 transition-transform" /> : <Sun size={18} className="group-hover:rotate-45 transition-transform" />}
             </button>
+            </div>
+            <IstanbulClock />
           </div>
         }
       />
 
-      <div className="absolute top-32 left-4 z-30">
+      <div className="absolute top-32 left-6 z-30">
         <LayerControl
           isparkEnabled={isparkEnabled}
           setIsparkEnabled={setIsparkEnabled}

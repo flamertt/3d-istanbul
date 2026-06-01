@@ -17,6 +17,7 @@ const CATEGORY_PATHS: Record<string, string> = {
   viewpoint: '<circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="2"/><path d="m15 15 5 5M12 10l-4 4" fill="none" stroke="currentColor" stroke-width="2"/>',
   stadium: '<path d="M12 2c5.523 0 10 4.477 10 10s-4.477 10-10 10S2 17.523 2 12 6.477 2 12 2z"/><path d="M12 8c2.209 0 4 1.791 4 4s-1.791 4-4 4-4-1.791-4-4 1.791-4 4-4z" fill="none" stroke="currentColor" stroke-width="2"/>',
   mall: '<path d="M3 9h18v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V9Z"/><path d="M3 9V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v4M12 12v9" fill="none" stroke="currentColor" stroke-width="2"/>',
+  monument: '<polygon points="12,2 9,7 15,7" fill="currentColor" stroke="none"/><rect x="9.5" y="7" width="5" height="7" rx="0.5" fill="currentColor" stroke="none"/><rect x="8.5" y="14" width="7" height="5" rx="0.5" fill="currentColor" stroke="none"/><rect x="7" y="19" width="10" height="2.5" rx="0.5" fill="currentColor" stroke="none"/>',
   other: '<path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3" fill="none" stroke="currentColor" stroke-width="2"/>'
 };
 

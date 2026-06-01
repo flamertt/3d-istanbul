@@ -87,22 +87,25 @@ export function IsparkMap({
     }
   };
 
-  const handleMapLoad = useCallback((e: { target: { addLayer: (layer: object) => void } }) => {
+  const handleMapLoad = useCallback((e: { target: { getStyle: () => { sources: Record<string, unknown> }; addLayer: (layer: object) => void } }) => {
     const map = e.target;
+    const sources = map.getStyle().sources;
+    const source = "openmaptiles" in sources ? "openmaptiles" : "carto";
+    const isLight = !mapStyleUrl.includes("dark");
     map.addLayer({
       id: "3d-buildings",
-      source: "carto",
+      source,
       "source-layer": "building",
       type: "fill-extrusion",
-      minzoom: 14,
+      minzoom: 11,
       paint: {
-        "fill-extrusion-color": "#2a2a3a",
+        "fill-extrusion-color": isLight ? "#c8c0b8" : "#2a2a3a",
         "fill-extrusion-height": ["*", ["coalesce", ["get", "render_height"], 10], 2],
         "fill-extrusion-base": ["*", ["coalesce", ["get", "render_min_height"], 0], 2],
         "fill-extrusion-opacity": 1.0,
       },
     });
-  }, []);
+  }, [mapStyleUrl]);
 
   return (
     <div className="w-full h-full" onContextMenu={(e) => e.preventDefault()}>
@@ -113,7 +116,7 @@ export function IsparkMap({
         onClick={handleClick}
         controller
       >
-        <Map ref={mapRef} mapStyle={mapStyleUrl} onLoad={handleMapLoad} />
+        <Map key={mapStyleUrl} ref={mapRef} mapStyle={mapStyleUrl} onLoad={handleMapLoad} />
       </DeckGL>
     </div>
   );

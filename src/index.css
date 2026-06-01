@@ -173,3 +173,22 @@ input[type="range"]::-moz-range-thumb {
 .play-pulse {
   animation: playPulse 1s ease-in-out infinite;
 }
+
+/* MapLibre attribution/logo — sağ alta, custom kontrollerle çakışmayacak şekilde */
+.maplibregl-ctrl-bottom-left,
+.mapboxgl-ctrl-bottom-left {
+  bottom: 8px !important;
+  left: 8px !important;
+}
+
+.maplibregl-ctrl-bottom-right,
+.mapboxgl-ctrl-bottom-right {
+  bottom: 8px !important;
+  right: 8px !important;
+}
+
+.maplibregl-ctrl-attrib,
+.mapboxgl-ctrl-attrib {
+  font-size: 9px !important;
+  opacity: 0.5;
+}

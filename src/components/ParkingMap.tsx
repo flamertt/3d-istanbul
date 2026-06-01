@@ -18,7 +18,8 @@ import { createCorrelationLayer } from "../layers/correlationLayer";
 import { getBlockTooltipContent, getDeltaTooltipContent } from "./BlockTooltip";
 import { getStationTooltipContent, getCorrelationTooltipContent } from "./BikeTooltip";
 
-const MAP_STYLE = "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json";
+const MAP_STYLE_DARK = "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json";
+const MAP_STYLE_LIGHT = "https://tiles.stadiamaps.com/styles/alidade_smooth.json";
 
 // Zoom tier boundaries
 const COLUMN_ZOOM_MIN = 13;
@@ -50,6 +51,7 @@ interface ParkingMapProps {
   selectedStationId?: string | null;
   onStationClick?: (station: StationData | null) => void;
   nearestStations?: Map<string, StationData[]>;
+  mapTheme?: "light" | "dark";
 }
 
 export function ParkingMap({
@@ -69,6 +71,7 @@ export function ParkingMap({
   selectedStationId,
   onStationClick,
   nearestStations,
+  mapTheme = "dark",
 }: ParkingMapProps) {
   const zoom = viewState.zoom;
   const tier = getZoomTier(zoom);
@@ -187,22 +190,26 @@ export function ParkingMap({
     [timeSlot, comparing, referenceSlot, viewMode, nearestStations],
   );
 
-  const handleMapLoad = useCallback((e: { target: { addLayer: (layer: object) => void } }) => {
+  const mapStyle = mapTheme === "light" ? MAP_STYLE_LIGHT : MAP_STYLE_DARK;
+
+  const handleMapLoad = useCallback((e: { target: { getStyle: () => { sources: Record<string, unknown> }; addLayer: (layer: object) => void } }) => {
     const map = e.target;
+    const sources = map.getStyle().sources;
+    const source = "openmaptiles" in sources ? "openmaptiles" : "carto";
     map.addLayer({
       id: "3d-buildings",
-      source: "carto",
+      source,
       "source-layer": "building",
       type: "fill-extrusion",
-      minzoom: 14,
+      minzoom: 11,
       paint: {
-        "fill-extrusion-color": "#2a2a3a",
+        "fill-extrusion-color": mapTheme === "light" ? "#c8c0b8" : "#2a2a3a",
         "fill-extrusion-height": ["*", ["coalesce", ["get", "render_height"], 10], 2],
         "fill-extrusion-base": ["*", ["coalesce", ["get", "render_min_height"], 0], 2],
         "fill-extrusion-opacity": 1.0,
       },
     });
-  }, []);
+  }, [mapTheme]);
 
   return (
     <DeckGL
@@ -215,7 +222,7 @@ export function ParkingMap({
       getTooltip={getTooltip}
       controller
     >
-      <Map mapStyle={MAP_STYLE} onLoad={handleMapLoad} />
+      <Map key={mapStyle} mapStyle={mapStyle} onLoad={handleMapLoad} />
     </DeckGL>
   );
 }

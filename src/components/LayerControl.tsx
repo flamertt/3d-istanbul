@@ -1,10 +1,27 @@
 import React from "react";
-import { 
-  Bus, Train, TrainFront, Bike, Waypoints, Zap, Trees, PersonStanding, 
-  Car, Navigation, Ship, GraduationCap, School, Moon, Theater, 
-  Landmark, Binoculars, Castle, Building2, Trophy, LibraryIcon,
+import {
+  Bus, Train, TrainFront, Bike, Waypoints, Zap, Trees, PersonStanding,
+  Car, Navigation, Ship, GraduationCap, School, Moon, Theater,
+  Binoculars, Castle, Building2, Trophy, LibraryIcon,
   ParkingSquare, MapPin, Layers
 } from "lucide-react";
+
+function ObeliskIcon({ size = 16 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+      {/* Tepe */}
+      <polygon points="8,1 6.2,4 9.8,4" fill="currentColor" />
+      {/* Gövde üst */}
+      <rect x="6.5" y="4" width="3" height="5" fill="currentColor" rx="0.2" />
+      {/* Gövde alt — biraz daha geniş */}
+      <rect x="5.8" y="9" width="4.4" height="3.5" fill="currentColor" rx="0.2" />
+      {/* Kaide */}
+      <rect x="4.5" y="12.5" width="7" height="1.5" fill="currentColor" rx="0.3" />
+      {/* Gölge çizgisi */}
+      <line x1="9" y1="4.5" x2="9.5" y2="12" stroke="white" strokeOpacity="0.15" strokeWidth="0.5" />
+    </svg>
+  );
+}
 import type { TurkeyOverlayFlags } from "../hooks/useTurkeyOverlays";
 import { Switch } from "./ui/switch";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "./ui/accordion";
@@ -109,7 +126,7 @@ export const LayerControl: React.FC<LayerControlProps> = ({
               <LayerItem icon={<Moon size={16} />} label="Cami" checked={landmarkFlags.mosque} onCheckedChange={() => toggleLandmark("mosque")} color="blue" />
               <LayerItem icon={<School size={16} />} label="Müze" checked={landmarkFlags.museum} onCheckedChange={() => toggleLandmark("museum")} color="purple" />
               <LayerItem icon={<Castle size={16} />} label="Hisar / Kale" checked={landmarkFlags.castle} onCheckedChange={() => toggleLandmark("castle")} color="red" />
-              <LayerItem icon={<Landmark size={16} />} label="Anıt" checked={landmarkFlags.monument} onCheckedChange={() => toggleLandmark("monument")} color="slate" />
+              <LayerItem icon={<ObeliskIcon size={16} />} label="Anıt" checked={landmarkFlags.monument} onCheckedChange={() => toggleLandmark("monument")} color="slate" />
               <LayerItem icon={<GraduationCap size={16} />} label="Üniversite" checked={landmarkFlags.university} onCheckedChange={() => toggleLandmark("university")} color="indigo" />
               <LayerItem icon={<Theater size={16} />} label="Tiyatro" checked={landmarkFlags.theatre} onCheckedChange={() => toggleLandmark("theatre")} color="orange" />
               <LayerItem icon={<Binoculars size={16} />} label="Manzara" checked={landmarkFlags.viewpoint} onCheckedChange={() => toggleLandmark("viewpoint")} color="fuchsia" />
