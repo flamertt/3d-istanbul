@@ -1,7 +1,7 @@
 import { Map, type MapRef } from "react-map-gl/maplibre";
 import { DeckGL } from "@deck.gl/react";
 import type { Layer, MapViewState, PickingInfo } from "deck.gl";
-import { useMemo, useRef } from "react";
+import { useCallback, useMemo, useRef } from "react";
 import type { IsparkLot } from "../types";
 import type { TurkeyPoiPoint } from "../layers/turkeyOverlayLayers";
 import { createIsparkLayers } from "../layers/isparkLayers";
@@ -87,6 +87,23 @@ export function IsparkMap({
     }
   };
 
+  const handleMapLoad = useCallback((e: { target: { addLayer: (layer: object) => void } }) => {
+    const map = e.target;
+    map.addLayer({
+      id: "3d-buildings",
+      source: "carto",
+      "source-layer": "building",
+      type: "fill-extrusion",
+      minzoom: 14,
+      paint: {
+        "fill-extrusion-color": "#2a2a3a",
+        "fill-extrusion-height": ["*", ["coalesce", ["get", "render_height"], 10], 2],
+        "fill-extrusion-base": ["*", ["coalesce", ["get", "render_min_height"], 0], 2],
+        "fill-extrusion-opacity": 1.0,
+      },
+    });
+  }, []);
+
   return (
     <div className="w-full h-full" onContextMenu={(e) => e.preventDefault()}>
       <DeckGL
@@ -96,7 +113,7 @@ export function IsparkMap({
         onClick={handleClick}
         controller
       >
-        <Map ref={mapRef} mapStyle={mapStyleUrl} />
+        <Map ref={mapRef} mapStyle={mapStyleUrl} onLoad={handleMapLoad} />
       </DeckGL>
     </div>
   );
