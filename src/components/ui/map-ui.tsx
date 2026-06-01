@@ -1,7 +1,9 @@
 import * as React from "react"
 import { cn } from "../../lib/utils"
-import { Button } from "./button" // I should probably create Button too if it's missing, but I'll use raw buttons for now or create Button
 import { Plus, Minus, Locate, Maximize2, Compass } from "lucide-react"
+
+// Ortak glass button stili — tüm floating kontroller aynı tasarım
+const glassBtn = "h-10 w-10 flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-accent/40 transition-all active:scale-95"
 
 export interface MapControlProps {
   onZoomIn?: () => void
@@ -30,7 +32,7 @@ export function MapControls({
   className,
   position = "bottom-right",
 }: MapControlProps) {
-  const positionClasses = {
+  const positionClasses: Record<string, string> = {
     "top-right": "top-4 right-4",
     "top-left": "top-4 left-4",
     "bottom-right": "bottom-4 right-4",
@@ -38,75 +40,40 @@ export function MapControls({
   }
 
   return (
-    <div
-      className={cn(
-        "absolute z-10 flex flex-col gap-2",
-        positionClasses[position],
-        className
-      )}
-    >
+    <div className={cn("absolute z-10 flex flex-col gap-1.5", positionClasses[position], className)}>
+      {/* Zoom grubu */}
       {showZoom && (
-        <div className="flex flex-col overflow-hidden rounded-md border border-border/40 bg-background/80 shadow-sm backdrop-blur-sm">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={onZoomIn}
-            className="h-9 w-9 rounded-none hover:bg-accent hover:text-accent-foreground transition-colors border-b border-border/40"
-            title="Yakınlaştır"
-          >
+        <div className="flex flex-col rounded-xl border border-border/40 bg-background/80 backdrop-blur-md shadow-lg overflow-hidden">
+          <button type="button" onClick={onZoomIn} className={cn(glassBtn, "border-b border-border/30")} title="Yakınlaştır">
             <Plus className="h-4 w-4" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={onZoomOut}
-            className="h-9 w-9 rounded-none hover:bg-accent hover:text-accent-foreground transition-colors"
-            title="Uzaklaştır"
-          >
+          </button>
+          <button type="button" onClick={onZoomOut} className={glassBtn} title="Uzaklaştır">
             <Minus className="h-4 w-4" />
-          </Button>
+          </button>
         </div>
       )}
 
       {showCompass && (
-        <div className="flex flex-col overflow-hidden rounded-md border border-border/40 bg-background/80 shadow-sm backdrop-blur-sm">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={onResetBearing}
-            className="h-9 w-9 rounded-none hover:bg-accent hover:text-accent-foreground transition-colors"
-            title="Kuzeye Yönel"
-          >
+        <div className="rounded-xl border border-border/40 bg-background/80 backdrop-blur-md shadow-lg overflow-hidden">
+          <button type="button" onClick={onResetBearing} className={glassBtn} title="Kuzeye Yönel">
             <Compass className="h-4 w-4" />
-          </Button>
+          </button>
         </div>
       )}
 
       {showLocate && (
-        <div className="flex flex-col overflow-hidden rounded-md border border-border/40 bg-background/80 shadow-sm backdrop-blur-sm">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={onLocate}
-            className="h-9 w-9 rounded-none hover:bg-accent hover:text-accent-foreground transition-colors"
-            title="Konumumu Bul"
-          >
+        <div className="rounded-xl border border-border/40 bg-background/80 backdrop-blur-md shadow-lg overflow-hidden">
+          <button type="button" onClick={onLocate} className={glassBtn} title="Konumumu Bul">
             <Locate className="h-4 w-4" />
-          </Button>
+          </button>
         </div>
       )}
 
       {showFullscreen && (
-        <div className="flex flex-col overflow-hidden rounded-md border border-border/40 bg-background/80 shadow-sm backdrop-blur-sm">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={onFullscreen}
-            className="h-9 w-9 rounded-none hover:bg-accent hover:text-accent-foreground transition-colors"
-            title="Tam Ekran"
-          >
+        <div className="rounded-xl border border-border/40 bg-background/80 backdrop-blur-md shadow-lg overflow-hidden">
+          <button type="button" onClick={onFullscreen} className={glassBtn} title="Tam Ekran">
             <Maximize2 className="h-4 w-4" />
-          </Button>
+          </button>
         </div>
       )}
     </div>

@@ -28,6 +28,10 @@ import type { GeoResult } from "./lib/geocode";
 import { MapControls } from "./components/ui/map-ui";
 import { LayerControl } from "./components/LayerControl";
 import { IstanbulClock } from "./components/IstanbulClock";
+import { useBusSim } from "./hooks/useBusSim";
+import { createBusSimLayers } from "./layers/busSimLayer";
+import { BusDetailPanel } from "./components/BusDetailPanel";
+import type { ActiveBus } from "./layers/busSimLayer";
 import type { TurkeyOverlayFlags } from "./hooks/useTurkeyOverlays";
 import { useEffect } from "react";
 import type { TurkeyPoiPoint } from "./layers/turkeyOverlayLayers";
@@ -59,9 +63,9 @@ function AppIspark() {
     university: false,
     museum: true,
     theatre: false,
-    monument: true,
+    monument: false,
     viewpoint: false,
-    castle: true,
+    castle: false,
     mall: false,
     stadium: false,
     library: false,
@@ -69,23 +73,53 @@ function AppIspark() {
   });
 
   const [overlayFlags, setOverlayFlags] = useState<TurkeyOverlayFlags>({
-    // Otobüs hatları çok büyük veri olduğu için default kapalı (tıklanınca açıyoruz).
-    busRoutes: false,
+    busRoutes: true,
     railLines: false,
     bikeLanes: false,
-    greenAreas: true,
+    greenAreas: false,
     busStops: false,
-    railStations: true,
-    evChargingStations: false,
+    railStations: false,
+    evChargingStations: true,
     micromobilityParks: false,
-    toilets: false,
+    toilets: true,
     taxiStops: false,
     taxiDolmusStops: false,
     minibusRoutes: false,
     minibusStops: false,
-    seaStations: true,
+    seaStations: false,
     
   });
+
+  const [busSimEnabled, setBusSimEnabled] = useState(true);
+  const busSim = useBusSim();
+
+  const toggleBusSim = useCallback((val: boolean | ((s: boolean) => boolean)) => {
+    setBusSimEnabled((prev) => {
+      const next = typeof val === "function" ? val(prev) : val;
+      // Bus sim açılınca otobus hatları overlay'i de aç
+      if (next) setOverlayFlags((f) => ({ ...f, busRoutes: true }));
+      return next;
+    });
+  }, []);
+
+  // Simülasyon saati: 07:00'dan başla, gerçek saat 06-23 arasındaysa onu kullan
+  const getInitialBusSec = () => (Math.floor(Date.now() / 1000) + 3 * 3600) % 86400;
+  const [busTimeSec, setBusTimeSec] = useState(getInitialBusSec);
+  const [busPlaying, setBusPlaying] = useState(true);
+  const [busSpeed, setBusSpeed] = useState(5); // 1x/5x/15x/30x
+  const [selectedBus, setSelectedBus] = useState<ActiveBus | null>(null);
+
+  // Smooth animation: 50ms tick — daha akıcı hareket
+  useEffect(() => {
+    if (!busSimEnabled || !busPlaying) return;
+    const id = setInterval(() => {
+      setBusTimeSec((t) => {
+        const next = t + busSpeed * 0.05; // 50ms * speed = sim seconds per tick
+        return next > 24 * 3600 ? 5 * 3600 : next;
+      });
+    }, 50);
+    return () => clearInterval(id);
+  }, [busSimEnabled, busPlaying, busSpeed]);
 
   const handleSearchSelect = useCallback(
     (result: GeoResult) => {
@@ -248,13 +282,43 @@ function AppIspark() {
     [landmarks, landmarkFlags, viewState.zoom, flyTo],
   );
 
+  const busSimLayers = useMemo(() => {
+    if (!busSimEnabled || !busSim.data) return [];
+    return createBusSimLayers(
+      busSim.data.trips,
+      busTimeSec,
+      busRoutes ?? undefined,
+      (bus) => {
+
+        setSelectedBus(bus);
+        setSelectedLot(null);
+        setSelectedPoi(null);
+        setSelectedBusRouteProps({ HAT_KODU: bus.route });
+        flyTo(bus.position[0], bus.position[1], 15);
+      },
+      viewState.zoom,
+    );
+  }, [busSimEnabled, busSim.data, busTimeSec, busRoutes, viewState.zoom]);
+
   const extraLayers = useMemo(
     () => {
-      const layers = [...radiusLayers, ...turkeyOverlayLayers, ...routeLayers];
-      if (landmarkLayer) layers.push(landmarkLayer);
-      return layers;
+      // Icons ("…-icons", "…-3d") her zaman line/polygon katmanlarının üstünde olmalı
+      const lineLayers = turkeyOverlayLayers.filter(
+        (l) => !l.id.endsWith("-icons") && !l.id.endsWith("-3d"),
+      );
+      const iconLayers = turkeyOverlayLayers.filter(
+        (l) => l.id.endsWith("-icons") || l.id.endsWith("-3d"),
+      );
+      return [
+        ...radiusLayers,
+        ...lineLayers,
+        ...routeLayers,
+        ...iconLayers,
+        ...(landmarkLayer ? [landmarkLayer] : []),
+        ...busSimLayers,
+      ];
     },
-    [radiusLayers, turkeyOverlayLayers, routeLayers, landmarkLayer],
+    [radiusLayers, turkeyOverlayLayers, routeLayers, landmarkLayer, busSimLayers],
   );
 
   const lots = isparkEnabled ? ispark.lots : [];
@@ -307,37 +371,12 @@ function AppIspark() {
         </div>
       )}
 
-      <Header
-        generated={ispark.lastUpdated}
-        themeToggle={
-          <div className="flex items-end gap-3">
-            <div className="flex flex-col gap-2">
-            <CameraControlDropdown
-              bearingLocked={bearingLocked}
-              cameraLocked={cameraLocked}
-              onToggleBearingLock={() => {
-                if (!bearingLocked) setLockedBearing(viewState.bearing ?? 0);
-                setBearingLocked((s) => !s);
-              }}
-              onToggleCameraLock={() => setCameraLocked((s) => !s)}
-              onResetNorth={() => _onViewStateChange({ ...viewState, bearing: 0 })}
-            />
-            <button
-              type="button"
-              onClick={() => setMapTheme((t) => (t === "light" ? "dark" : "light"))}
-              className="group pointer-events-auto rounded-xl bg-background/90 backdrop-blur-md border border-border/40 shadow-xl p-3 text-muted-foreground hover:text-foreground transition-all hover:scale-105 active:scale-95"
-              aria-label="Harita temasını değiştir"
-              title={mapTheme === "light" ? "Koyu temaya geç" : "Açık temaya geç"}
-            >
-              {mapTheme === "light" ? <Moon size={18} className="group-hover:rotate-12 transition-transform" /> : <Sun size={18} className="group-hover:rotate-45 transition-transform" />}
-            </button>
-            </div>
-            <IstanbulClock />
-          </div>
-        }
-      />
-
-      <div className="absolute top-32 left-6 z-30">
+      {/* Sol sütun: Logo + LayerControl aynı genişlikte */}
+      <div className="absolute top-6 left-6 z-20 flex flex-col gap-3 pointer-events-none">
+        <div className="pointer-events-auto">
+          <Header generated={ispark.lastUpdated} />
+        </div>
+        <div className="pointer-events-auto">
         <LayerControl
           isparkEnabled={isparkEnabled}
           setIsparkEnabled={setIsparkEnabled}
@@ -345,7 +384,45 @@ function AppIspark() {
           toggleFlag={toggleFlag}
           landmarkFlags={landmarkFlags}
           toggleLandmark={toggleLandmark}
+          busSimEnabled={busSimEnabled}
+          setBusSimEnabled={toggleBusSim}
+          busSimLoading={busSim.loading}
         />
+        </div>
+      </div>
+
+      {/* Üst orta: SearchBar + Clock + Kamera + Tema — aynı h-10, aynı glass */}
+      <div className="absolute top-6 left-1/2 -translate-x-1/2 z-30 flex items-center gap-2 pointer-events-auto">
+        <SearchBar
+          query={search.query}
+          results={search.results}
+          isSearching={search.isSearching}
+          radius={search.radius}
+          hasSelection={search.selectedResult !== null}
+          onQueryChange={search.setQuery}
+          onSelectResult={handleSearchSelect}
+          onClear={search.clearSearch}
+          onRadiusChange={search.setRadius}
+        />
+        <IstanbulClock />
+        <CameraControlDropdown
+          bearingLocked={bearingLocked}
+          cameraLocked={cameraLocked}
+          onToggleBearingLock={() => {
+            if (!bearingLocked) setLockedBearing(viewState.bearing ?? 0);
+            setBearingLocked((s) => !s);
+          }}
+          onToggleCameraLock={() => setCameraLocked((s) => !s)}
+          onResetNorth={() => _onViewStateChange({ ...viewState, bearing: 0 })}
+        />
+        <button
+          type="button"
+          onClick={() => setMapTheme((t) => (t === "light" ? "dark" : "light"))}
+          className="h-10 w-10 flex items-center justify-center rounded-xl bg-background/80 backdrop-blur-md border border-border/40 shadow-lg text-muted-foreground hover:text-foreground transition-all hover:scale-105 active:scale-95"
+          aria-label="Harita temasını değiştir"
+        >
+          {mapTheme === "light" ? <Moon size={16} /> : <Sun size={16} />}
+        </button>
       </div>
 
       <MapControls 
@@ -371,6 +448,14 @@ function AppIspark() {
 
       {!selectedLot && selectedBusRouteProps && (
         <BusRouteDetailPanel routeProps={selectedBusRouteProps} onClose={() => setSelectedBusRouteProps(null)} />
+      )}
+
+      {selectedBus && (
+        <BusDetailPanel
+          bus={selectedBus}
+          currentTimeSec={busTimeSec}
+          onClose={() => { setSelectedBus(null); setSelectedBusRouteProps(null); }}
+        />
       )}
 
       {!selectedLot && !selectedBusRouteProps && selectedPoi && (
@@ -406,17 +491,6 @@ function AppIspark() {
         mapStyleUrl={mapStyleUrl}
         />
 
-      <SearchBar
-        query={search.query}
-        results={search.results}
-        isSearching={search.isSearching}
-        radius={search.radius}
-        hasSelection={search.selectedResult !== null}
-        onQueryChange={search.setQuery}
-        onSelectResult={handleSearchSelect}
-        onClear={search.clearSearch}
-        onRadiusChange={search.setRadius}
-      />
     </div>
   );
 }

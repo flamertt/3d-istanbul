@@ -234,7 +234,7 @@ export function PoiDetailPanel({
   const theme = POI_THEMES[poi.kind];
 
   return (
-    <Card className="absolute top-16 right-4 z-40 w-96 max-h-[calc(100vh-theme(spacing.20))] flex flex-col pointer-events-auto border-border/40 bg-background/90 backdrop-blur-md shadow-2xl overflow-hidden panel-slide-in">
+    <Card className="absolute top-0 right-0 bottom-0 z-40 w-80 flex flex-col pointer-events-auto border-l border-border/40 bg-background/95 backdrop-blur-xl shadow-2xl overflow-hidden panel-slide-in rounded-none">
       <div className={cn("p-1", theme.headerStripe)}>
         <CardHeader className="p-4 pb-2 space-y-0">
           <div className="flex items-start justify-between gap-4">

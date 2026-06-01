@@ -381,27 +381,27 @@ export function createTurkeyOverlayLayers(
         getLineColor: (f: unknown) => {
           const p = getFeatureProperties(f);
           const isSelected = matchesSelectedBusRoute(p);
-          if (isSelected) return [255, 255, 255, 255]; // Selected route becomes white/bright
+          // Seçili hat varsa → sadece o hat görünür, diğerleri tamamen şeffaf
           const n = (p?.["guzergahNo"] as number) ?? 1;
-          // Az hat: mavi/serin → çok hat: turuncu/sıcak
-          if (n <= 3)  return [99, 179, 237, 180];   // açık mavi
-          if (n <= 8)  return [59, 130, 246, 190];   // mavi
-          if (n <= 15) return [234, 179, 8,   200];  // sarı
-          if (n <= 25) return [249, 115, 22,  210];  // turuncu
-          return               [239, 68,  68,  220];  // kırmızı
+          const baseColor = n <= 3  ? [99, 179, 237]  :
+                            n <= 8  ? [59, 130, 246]  :
+                            n <= 15 ? [234, 179, 8]   :
+                            n <= 25 ? [249, 115, 22]  :
+                                      [239, 68,  68];
+          if (selectedHatKodu || selectedGuzergahKodu || selectedId) {
+            if (isSelected) return [...baseColor, 255];
+            return [0, 0, 0, 0];
+          }
+          const alpha = n <= 3 ? 180 : n <= 8 ? 190 : n <= 15 ? 200 : n <= 25 ? 210 : 220;
+          return [...baseColor, alpha];
         },
         lineWidthUnits: "pixels",
         lineWidthMinPixels: 1,
         getLineWidth: (f: unknown) => {
           const p = getFeatureProperties(f);
           const isSelected = matchesSelectedBusRoute(p);
-          if (isSelected) return 12; // Daha da kalınlaştırdım (8 -> 12)
-          const n = (p?.["guzergahNo"] as number) ?? 1;
-          if (n <= 3)  return 2;
-          if (n <= 8)  return 3;
-          if (n <= 15) return 4;
-          if (n <= 25) return 5;
-          return 6;
+          if (isSelected) return 5;
+          return 1;
         },
         updateTriggers: {
           getLineColor: [selectedHatKodu, selectedGuzergahKodu, selectedId],
@@ -560,7 +560,6 @@ export function createTurkeyOverlayLayers(
   // Not only height/radius; footprint geometry differs per POI type.
   if (overlays.busStops && showPoints) {
     const pts = extractBusStops(overlays.busStops);
-    // 3D yapıyı kaldırdık, sadece ikon yeterli
     layers.push(createPoiIconLayer("turkey-bus-stops-icons", pts, POI_ICON_URLS.busStop, 40, [255, 255, 255, 255]));
   }
 

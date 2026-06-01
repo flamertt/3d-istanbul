@@ -26,18 +26,18 @@ export function SearchBar({
   onRadiusChange,
 }: SearchBarProps) {
   return (
-    <div className="absolute top-4 left-1/2 -translate-x-1/2 z-30 w-80">
+    <div className="w-72 flex flex-col">
       {/* Search input */}
-      <div className="flex items-center rounded-2xl border border-gray-800/50 bg-gray-950/82 backdrop-blur-md shadow-[0_10px_26px_rgba(0,0,0,0.20)]">
-        <div className="flex h-full items-center justify-center px-5 text-gray-500">
-          <Search size={15} className="pointer-events-none shrink-0" />
+      <div className="h-10 flex items-center rounded-xl border border-border/40 bg-background/80 backdrop-blur-md shadow-lg">
+        <div className="flex h-full items-center justify-center px-3 text-muted-foreground">
+          <Search size={14} className="pointer-events-none shrink-0" />
         </div>
         <input
           type="text"
           value={query}
           onChange={(e) => onQueryChange(e.target.value)}
           placeholder="İstanbul adresi ara..."
-          className="min-w-0 flex-1 py-3 pl-3 pr-3 bg-transparent text-sm text-white placeholder:text-gray-500 focus:outline-none focus:ring-0"
+          className="min-w-0 flex-1 h-full bg-transparent text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-0"
         />
         {(query || hasSelection) && (
           <button

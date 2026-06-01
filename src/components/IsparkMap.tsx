@@ -87,6 +87,7 @@ export function IsparkMap({
     }
   };
 
+
   const handleMapLoad = useCallback((e: { target: { getStyle: () => { sources: Record<string, unknown> }; addLayer: (layer: object) => void } }) => {
     const map = e.target;
     const sources = map.getStyle().sources;

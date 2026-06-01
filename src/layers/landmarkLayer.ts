@@ -81,6 +81,7 @@ export function createLandmarkLayer(
     },
     getSize: (d) => (zoom >= 14 ? 40 : 30),
     getColor: [255, 255, 255],
+    updateTriggers: { getSize: zoom },
     onClick: (info) => {
       if (info.object && onClick) {
         onClick(info.object);

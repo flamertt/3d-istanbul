@@ -35,6 +35,9 @@ interface LayerControlProps {
   toggleFlag: (key: keyof TurkeyOverlayFlags) => void;
   landmarkFlags: Record<string, boolean>;
   toggleLandmark: (category: string) => void;
+  busSimEnabled?: boolean;
+  setBusSimEnabled?: (val: boolean | ((s: boolean) => boolean)) => void;
+  busSimLoading?: boolean;
   className?: string;
 }
 
@@ -45,11 +48,14 @@ export const LayerControl: React.FC<LayerControlProps> = ({
   toggleFlag,
   landmarkFlags,
   toggleLandmark,
+  busSimEnabled = false,
+  setBusSimEnabled,
+  busSimLoading = false,
   className
 }) => {
   return (
     <Card className={cn(
-      "w-80 flex flex-col pointer-events-auto border-border/40 bg-background/80 backdrop-blur-sm overflow-hidden shadow-2xl", 
+      "w-72 flex flex-col pointer-events-auto bg-background/80 backdrop-blur-md border border-border/40 shadow-lg overflow-hidden rounded-xl",
       className
     )}>
       {/* Başlık alanı */}
@@ -75,13 +81,22 @@ export const LayerControl: React.FC<LayerControlProps> = ({
               Temel Katmanlar
             </AccordionTrigger>
             <AccordionContent className="space-y-1">
-              <LayerItem 
-                icon={<ParkingSquare size={16} />} 
-                label="İSPARK Otoparkları" 
-                checked={isparkEnabled} 
+              <LayerItem
+                icon={<ParkingSquare size={16} />}
+                label="İSPARK Otoparkları"
+                checked={isparkEnabled}
                 onCheckedChange={() => setIsparkEnabled(s => !s)}
                 color="emerald"
               />
+              {setBusSimEnabled && (
+                <LayerItem
+                  icon={<Bus size={16} />}
+                  label={busSimLoading ? "Yükleniyor…" : "Toplu Taşıma"}
+                  checked={busSimEnabled}
+                  onCheckedChange={() => setBusSimEnabled(s => !s)}
+                  color="blue"
+                />
+              )}
               <LayerItem 
                  icon={<Trees size={16} />} 
                  label="Yeşil Alanlar" 

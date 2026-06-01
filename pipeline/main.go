@@ -38,6 +38,8 @@ func main() {
 		err = runMockIsochrones(args)
 	case "bus-routes-freq":
 		err = runBusRoutesFreq(args)
+	case "gtfs-sim":
+		err = runGTFSSim(args)
 	default:
 		fmt.Fprintf(os.Stderr, "Unknown command: %s\n", cmd)
 		usage()
@@ -64,4 +66,5 @@ func usage() {
 	fmt.Fprintln(os.Stderr, "  compute-isochrones [--valhalla-url URL] [--spacing F] [--tolerance F] [--modes M,M,M]")
 	fmt.Fprintln(os.Stderr, "  mock-isochrones")
 	fmt.Fprintln(os.Stderr, "  bus-routes-freq")
+	fmt.Fprintln(os.Stderr, "  gtfs-sim")
 }

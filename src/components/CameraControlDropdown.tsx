@@ -42,15 +42,15 @@ export function CameraControlDropdown({
         type="button"
         onClick={() => setOpen((s) => !s)}
         className={cn(
-          "rounded-xl backdrop-blur-md border shadow-xl p-3 transition-all hover:scale-105 active:scale-95 group relative",
+          "h-10 w-10 flex items-center justify-center rounded-xl backdrop-blur-md border shadow-lg transition-all hover:scale-105 active:scale-95 relative",
           anyActive
             ? "bg-primary/10 border-primary/40 text-primary"
-            : "bg-background/90 border-border/40 text-muted-foreground hover:text-foreground"
+            : "bg-background/80 border-border/40 text-muted-foreground hover:text-foreground"
         )}
         aria-label="Kamera kontrolleri"
         title="Kamera kontrolleri"
       >
-        <SlidersHorizontal size={18} />
+        <SlidersHorizontal size={15} />
         {anyActive && (
           <span className="absolute top-2 right-2 w-2 h-2 rounded-full bg-primary animate-pulse" />
         )}

@@ -1,4 +1,4 @@
-import { ColumnLayer, IconLayer, ScatterplotLayer } from "deck.gl";
+import { ColumnLayer, IconLayer } from "deck.gl";
 import type { Layer } from "deck.gl";
 import type { IsparkLot } from "../types";
 import { occupancyToRgb } from "../lib/colors";
@@ -43,21 +43,35 @@ function getColumnElevation(lot: IsparkLot): number {
   return baseByType + capacityHeight;
 }
 
-const ISPARK_ICON_URL =
-  "data:image/svg+xml;utf8," +
-  encodeURIComponent(
-    `<svg xmlns="http://www.w3.org/2000/svg" width="112" height="112" viewBox="0 0 112 112">
-      <rect x="8" y="8" width="96" height="96" rx="24" fill="#1d4ed8" stroke="#e2e8f0" stroke-width="6"/>
-      <path d="M36 28h20c12 0 22 7 22 20s-10 20-22 20H46v16H36V28zm10 10v20h9c7 0 13-3 13-10s-6-10-13-10h-9z" fill="#ffffff"/>
-    </svg>`,
-  );
+// Cache keyed by "r,g,b,closed"
+const iconCache = new Map<string, string>();
+
+// Landmark stiliyle aynı: koyu daire + doluluk renkli stroke + beyaz P harfi
+function buildIsparkIcon(r: number, g: number, b: number, isOpen: boolean): string {
+  const key = `${r},${g},${b},${isOpen}`;
+  if (iconCache.has(key)) return iconCache.get(key)!;
+  const stroke = `rgb(${r},${g},${b})`;
+  const opacity = isOpen ? 1 : 0.5;
+  // P harfi - parking sembolü
+  const pPath = `<path d="M36 28h20c12 0 22 7 22 20s-10 20-22 20H46v16H36V28zm10 10v20h9c7 0 13-3 13-10s-6-10-13-10h-9z" fill="white"/>`;
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100" opacity="${opacity}">
+    <circle cx="50" cy="50" r="46" fill="#030712" stroke="${stroke}" stroke-width="8"/>
+    ${pPath}
+  </svg>`;
+  const url = "data:image/svg+xml;utf8," + encodeURIComponent(svg);
+  iconCache.set(key, url);
+  return url;
+}
+
+function getIsparkIconUrl(lot: IsparkLot): string {
+  const occ = getOccupancyRatio(lot);
+  const [r, g, b] = occ < 0 ? [107, 114, 128] : occupancyToRgb(occ);
+  return buildIsparkIcon(r, g, b, lot.isOpen);
+}
 
 export function createIsparkLayers(lots: IsparkLot[], zoom: number): Layer[] {
-  const showColumns = zoom >= 11;
-  const showColumnIcons = zoom >= 12;
-
+  const showColumns = zoom >= 13;
   const layers: Layer[] = [];
-
   if (!lots.length) return layers;
 
   if (showColumns) {
@@ -65,12 +79,10 @@ export function createIsparkLayers(lots: IsparkLot[], zoom: number): Layer[] {
       new ColumnLayer<IsparkLot>({
         id: "ispark-columns",
         data: lots,
-        // Daha düşük disk çözünürlüğü daha az vertex üretir.
         diskResolution: 20,
-        radius: 30,
+        radius: 12,
         radiusUnits: "meters",
         extruded: true,
-        // Stroke, fragment maliyetini artırıyor; performans için kapatıyoruz.
         stroked: false,
         getPosition: (d) => [d.lng, d.lat],
         getElevation: (d) => getColumnElevation(d),
@@ -80,67 +92,36 @@ export function createIsparkLayers(lots: IsparkLot[], zoom: number): Layer[] {
           const [r, g, b] = occupancyToRgb(occ);
           return [r, g, b, getIsOpenOpacity(d)];
         },
-        getLineColor: (d) => {
-          const occ = getOccupancyRatio(d);
-          if (occ < 0) return [160, 160, 160, 110];
-          const [r, g, b] = occupancyToRgb(occ);
-          return [r, g, b, 200];
-        },
-        // Click için pickable yeterli; autoHighlight hover/picking işini sürekli tetikleyebiliyor.
         pickable: true,
         autoHighlight: false,
-        highlightColor: [255, 255, 255, 90],
-        // Veri gelince uzun geçiş animasyonları performansı düşürebilir.
         transitions: undefined,
         updateTriggers: {},
       }),
     );
-    if (showColumnIcons) {
-      layers.push(
-        new IconLayer<IsparkLot>({
-          id: "ispark-column-icons",
-          data: lots,
-          pickable: true,
-          billboard: true,
-          sizeUnits: "meters",
-          getIcon: () => ({
-            url: ISPARK_ICON_URL,
-            width: 112,
-            height: 112,
-            anchorY: 112,
-          }),
-          getPosition: (d) => [d.lng, d.lat, getColumnElevation(d) + 14],
-          getSize: 90,
-          getColor: (d) => (d.isOpen ? [255, 255, 255, 230] : [203, 213, 225, 180]),
-          updateTriggers: {},
-        }),
-      );
-    }
-
-  } else {
-    layers.push(
-      new ScatterplotLayer<IsparkLot>({
-        id: "ispark-scatter",
-        data: lots,
-        pickable: true,
-        autoHighlight: false,
-        getPosition: (d) => [d.lng, d.lat],
-        getRadius: 24,
-        radiusUnits: "meters",
-        radiusMinPixels: 3,
-        radiusMaxPixels: 24,
-        stroked: false,
-        getFillColor: (d) => {
-          const occ = getOccupancyRatio(d);
-          if (occ < 0) return [107, 114, 128, 160];
-          const [r, g, b] = occupancyToRgb(occ);
-          return [r, g, b, getIsOpenOpacity(d)];
-        },
-        highlightColor: [255, 255, 255, 120],
-        updateTriggers: {},
-      }),
-    );
   }
+
+  layers.push(
+    new IconLayer<IsparkLot>({
+      id: "ispark-icons",
+      data: lots,
+      pickable: true,
+      billboard: true,
+      sizeUnits: "pixels",
+      getPosition: (d) =>
+        showColumns
+          ? [d.lng, d.lat, getColumnElevation(d) + 60]
+          : [d.lng, d.lat],
+      getIcon: (d) => ({
+        url: getIsparkIconUrl(d),
+        width: 100,
+        height: 100,
+        anchorY: 50,
+      }),
+      getSize: 28,
+      getColor: [255, 255, 255],
+      updateTriggers: { getPosition: zoom },
+    }),
+  );
 
   return layers;
 }
