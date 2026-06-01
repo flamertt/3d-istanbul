@@ -1,7 +1,7 @@
-import { Map } from "react-map-gl/maplibre";
+import { Map, type MapRef } from "react-map-gl/maplibre";
 import { DeckGL } from "@deck.gl/react";
 import type { Layer, MapViewState, PickingInfo } from "deck.gl";
-import { useMemo } from "react";
+import { useMemo, useRef } from "react";
 import type { IsparkLot } from "../types";
 import type { TurkeyPoiPoint } from "../layers/turkeyOverlayLayers";
 import { createIsparkLayers } from "../layers/isparkLayers";
@@ -36,6 +36,7 @@ export function IsparkMap({
   mapStyleUrl,
 }: IsparkMapProps) {
   const zoom = viewState.zoom;
+  const mapRef = useRef<MapRef>(null);
 
   const isparkLayers = useMemo(() => createIsparkLayers(lots, zoom), [lots, zoom]);
   const layers = useMemo(
@@ -87,15 +88,17 @@ export function IsparkMap({
   };
 
   return (
-    <DeckGL
-      viewState={viewState}
-      onViewStateChange={({ viewState: vs }) => onViewStateChange(vs as MapViewState)}
-      layers={layers}
-      onClick={handleClick}
-      controller
-    >
-      <Map mapStyle={mapStyleUrl} />
-    </DeckGL>
+    <div className="w-full h-full" onContextMenu={(e) => e.preventDefault()}>
+      <DeckGL
+        viewState={viewState}
+        onViewStateChange={({ viewState: vs }) => onViewStateChange(vs as MapViewState)}
+        layers={layers}
+        onClick={handleClick}
+        controller
+      >
+        <Map ref={mapRef} mapStyle={mapStyleUrl} />
+      </DeckGL>
+    </div>
   );
 }
 

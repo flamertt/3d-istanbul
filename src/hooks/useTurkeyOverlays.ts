@@ -61,7 +61,7 @@ export function useTurkeyOverlays(flags: TurkeyOverlayFlags, zoom: number) {
   const showPoints = zoom >= 13.2;
 
   const busRoutes = useLazyFeatureCollection(
-    "/data/turkey_overlays/bus_routes.geojson",
+    "/data/turkey_overlays/bus_routes_freq.geojson",
     flags.busRoutes && showLines,
   );
   const railLines = useLazyFeatureCollection(

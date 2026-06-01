@@ -9,6 +9,7 @@ import { useRoute } from "./hooks/useRoute";
 import { createTurkeyOverlayLayers } from "./layers/turkeyOverlayLayers";
 import { createRadiusOverlayLayer } from "./layers/radiusOverlayLayer";
 import { IsparkMap } from "./components/IsparkMap";
+import { CameraControlDropdown } from "./components/CameraControlDropdown";
 import { SearchBar } from "./components/SearchBar";
 import { Header } from "./components/Header";
 import { IsparkLotDetailPanel } from "./components/IsparkLotDetailPanel";
@@ -22,13 +23,22 @@ import type { TurkeyPoiPoint } from "./layers/turkeyOverlayLayers";
 import type { IsparkLot } from "./types";
 
 function AppIspark() {
-  const { viewState, onViewStateChange, flyTo } = useMapView();
+  const { viewState, onViewStateChange: _onViewStateChange, flyTo } = useMapView();
   const ispark = useIsparkLots();
   const search = useGeoSearch();
   const { route, getDirections, clearRoute } = useRoute();
 
   const [isparkEnabled, setIsparkEnabled] = useState(true);
   const [layersCollapsed, setLayersCollapsed] = useState(false);
+  const [bearingLocked, setBearingLocked] = useState(false);
+  const [lockedBearing, setLockedBearing] = useState(0);
+  const [cameraLocked, setCameraLocked] = useState(false);
+
+  const onViewStateChange = useCallback((vs: typeof viewState) => {
+    if (cameraLocked) return;
+    if (bearingLocked) _onViewStateChange({ ...vs, bearing: lockedBearing });
+    else _onViewStateChange(vs);
+  }, [cameraLocked, bearingLocked, lockedBearing, _onViewStateChange]);
   const [selectedLot, setSelectedLot] = useState<IsparkLot | null>(null);
   const [selectedPoi, setSelectedPoi] = useState<TurkeyPoiPoint | null>(null);
   const [selectedBusRouteProps, setSelectedBusRouteProps] = useState<Record<string, unknown> | null>(null);
@@ -222,6 +232,16 @@ function AppIspark() {
             >
               <LocateFixed size={18} />
             </button>
+            <CameraControlDropdown
+              bearingLocked={bearingLocked}
+              cameraLocked={cameraLocked}
+              onToggleBearingLock={() => {
+                if (!bearingLocked) setLockedBearing(viewState.bearing ?? 0);
+                setBearingLocked((s) => !s);
+              }}
+              onToggleCameraLock={() => setCameraLocked((s) => !s)}
+              onResetNorth={() => _onViewStateChange({ ...viewState, bearing: 0 })}
+            />
             <button
               type="button"
               onClick={() => setMapTheme((t) => (t === "light" ? "dark" : "light"))}
@@ -375,7 +395,7 @@ function AppIspark() {
         }}
         extraLayers={extraLayers}
         mapStyleUrl={mapStyleUrl}
-      />
+        />
 
       <SearchBar
         query={search.query}

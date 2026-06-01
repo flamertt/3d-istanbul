@@ -36,6 +36,8 @@ func main() {
 		err = runComputeIsochrones(args)
 	case "mock-isochrones":
 		err = runMockIsochrones(args)
+	case "bus-routes-freq":
+		err = runBusRoutesFreq(args)
 	default:
 		fmt.Fprintf(os.Stderr, "Unknown command: %s\n", cmd)
 		usage()
@@ -61,4 +63,5 @@ func usage() {
 	fmt.Fprintln(os.Stderr, "  aggregate-bikes [--months N]")
 	fmt.Fprintln(os.Stderr, "  compute-isochrones [--valhalla-url URL] [--spacing F] [--tolerance F] [--modes M,M,M]")
 	fmt.Fprintln(os.Stderr, "  mock-isochrones")
+	fmt.Fprintln(os.Stderr, "  bus-routes-freq")
 }

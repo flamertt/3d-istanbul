@@ -364,14 +364,27 @@ export function createTurkeyOverlayLayers(
         getLineColor: (f: unknown) => {
           const p = getFeatureProperties(f);
           const isSelected = matchesSelectedBusRoute(p);
-          return isSelected ? [239, 68, 68, 255] : [59, 130, 246, 160];
+          if (isSelected) return [239, 68, 68, 255];
+          const n = (p["guzergahNo"] as number) ?? 1;
+          // Az hat: mavi/serin → çok hat: turuncu/sıcak
+          if (n <= 3)  return [99, 179, 237, 180];   // açık mavi
+          if (n <= 8)  return [59, 130, 246, 190];   // mavi
+          if (n <= 15) return [234, 179, 8,   200];  // sarı
+          if (n <= 25) return [249, 115, 22,  210];  // turuncu
+          return               [239, 68,  68,  220];  // kırmızı
         },
-        // Tıklanabilirlik ve görünürlük için çizgi kalınlığını seçime göre değiştiriyoruz.
-        lineWidthMinPixels: 2,
+        lineWidthUnits: "pixels",
+        lineWidthMinPixels: 1,
         getLineWidth: (f: unknown) => {
           const p = getFeatureProperties(f);
           const isSelected = matchesSelectedBusRoute(p);
-          return isSelected ? 14 : 3;
+          if (isSelected) return 5;
+          const n = (p["guzergahNo"] as number) ?? 1;
+          if (n <= 3)  return 1;
+          if (n <= 8)  return 2;
+          if (n <= 15) return 3;
+          if (n <= 25) return 4;
+          return 5;
         },
         updateTriggers: {
           getLineColor: [selectedHatKodu, selectedGuzergahKodu, selectedId],
