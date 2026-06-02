@@ -39,9 +39,7 @@ function buildIndex(trips: BusTrip[]) {
   maxTripDuration = max || 7200;
 }
 
-function getWindowTrips(currentTimeSec: number): BusTrip[] {
-  const lo = currentTimeSec - maxTripDuration;
-  const hi = currentTimeSec;
+function binarySlice(lo: number, hi: number): BusTrip[] {
   let left = 0, right = sortedTrips.length;
   while (left < right) {
     const mid = (left + right) >> 1;
@@ -56,6 +54,17 @@ function getWindowTrips(currentTimeSec: number): BusTrip[] {
     else right = mid;
   }
   return sortedTrips.slice(start, left);
+}
+
+function getWindowTrips(currentTimeSec: number): BusTrip[] {
+  const lo = Math.max(0, currentTimeSec - maxTripDuration);
+  const result = binarySlice(lo, currentTimeSec);
+  // Gece yarısı sonrası: önceki günden devam eden seferleri de dahil et
+  if (currentTimeSec < 10800) {
+    const overnight = binarySlice(86400 - maxTripDuration, 86400);
+    return [...result, ...overnight];
+  }
+  return result;
 }
 
 // ── Geometry ───────────────────────────────────────────────────────────────────
@@ -124,9 +133,11 @@ function computeActive(currentTimeSec: number): ActiveBus[] {
     const { timestamps } = trip;
     if (!timestamps.length) continue;
     const t0 = timestamps[0], t1 = timestamps[timestamps.length - 1];
-    if (currentTimeSec < t0 || currentTimeSec > t1) continue;
+    // Gece yarısı geçiş: sefer geç başladıysa ve şimdiki saat erken sabahsa, saat üzerine 86400 ekle
+    const adjTime = (t0 > 75600 && currentTimeSec < 10800) ? currentTimeSec + 86400 : currentTimeSec;
+    if (adjTime < t0 || adjTime > t1) continue;
     if (t1 - t0 < 900) continue;
-    const progress = tripProgress(timestamps, currentTimeSec);
+    const progress = tripProgress(timestamps, adjTime);
     const key = `${trip.route}|${trip.headsign}`;
     const existing = best.get(key);
     if (!existing || Math.abs(progress - 0.5) < Math.abs(existing.progress - 0.5)) {
@@ -138,9 +149,11 @@ function computeActive(currentTimeSec: number): ActiveBus[] {
   for (const { progress, trip } of best.values()) {
     const geom = geomMap.get(trip.route);
     let pos: Coord;
+    const t0 = trip.timestamps[0];
+    const adjTime = (t0 > 75600 && currentTimeSec < 10800) ? currentTimeSec + 86400 : currentTimeSec;
     if (geom) pos = snapToRoute(progress, geom);
     else {
-      const fb = interpolatePosition(trip, currentTimeSec);
+      const fb = interpolatePosition(trip, adjTime);
       if (!fb) continue;
       pos = fb;
     }

@@ -19,11 +19,11 @@ import { IsparkLotDetailPanel } from "./components/IsparkLotDetailPanel";
 import { PoiDetailPanel } from "./components/PoiDetailPanel";
 import { BusRouteDetailPanel } from "./components/BusRouteDetailPanel";
 import { 
-  Sun, Moon, LocateFixed, ParkingSquare, Bus, Train, TrainFront, Bike, Zap, 
-  Trees, PersonStanding, Car, Navigation, Ship, MapPin, Waypoints, 
-  ChevronDown, ChevronUp, Landmark, GraduationCap, School, 
-  Binoculars, Castle, Building2, Trophy, Library as LibraryIcon, 
-  Theater, Map as MapIcon
+  Sun, Moon, LocateFixed, ParkingSquare, Bus, Train, TrainFront, Bike, Zap,
+  Trees, PersonStanding, Car, Navigation, Ship, MapPin, Waypoints,
+  ChevronDown, ChevronUp, Landmark, GraduationCap, School,
+  Binoculars, Castle, Building2, Trophy, Library as LibraryIcon,
+  Theater, Map as MapIcon, Menu, X
 } from "lucide-react";
 import type { GeoResult } from "./lib/geocode";
 import { MapControls } from "./components/ui/map-ui";
@@ -54,6 +54,7 @@ function AppIspark() {
 
   const [isparkEnabled, setIsparkEnabled] = useState(true);
   const [layersCollapsed, setLayersCollapsed] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [bearingLocked, setBearingLocked] = useState(false);
   const [lockedBearing, setLockedBearing] = useState(0);
   const [cameraLocked, setCameraLocked] = useState(false);
@@ -130,7 +131,7 @@ function AppIspark() {
     const id = setInterval(() => {
       setBusTimeSec((t) => {
         const next = t + busSpeed * 0.05; // 50ms * speed = sim seconds per tick
-        return next > 24 * 3600 ? 5 * 3600 : next;
+        return next >= 86400 ? next - 86400 : next; // gece yarısı doğal wraparound
       });
     }, 50);
     return () => clearInterval(id);
@@ -536,8 +537,29 @@ function AppIspark() {
         </div>
       )}
 
-      {/* Sol sütun: Logo + LayerControl aynı genişlikte */}
-      <div className="absolute top-6 left-6 z-20 flex flex-col gap-3 pointer-events-none" style={{ maxHeight: "calc(100vh - 8rem)" }}>
+      {/* Mobile backdrop */}
+      {mobileMenuOpen && (
+        <div
+          className="fixed inset-0 z-40 bg-black/50 md:hidden"
+          onClick={() => setMobileMenuOpen(false)}
+        />
+      )}
+
+      {/* Mobile hamburger button */}
+      <button
+        type="button"
+        className="md:hidden absolute top-4 left-4 z-50 h-10 w-10 flex items-center justify-center rounded-xl bg-background/80 backdrop-blur-md border border-border/40 shadow-lg text-muted-foreground hover:text-foreground transition-all"
+        onClick={() => setMobileMenuOpen((v) => !v)}
+        aria-label="Menü"
+      >
+        {mobileMenuOpen ? <X size={18} /> : <Menu size={18} />}
+      </button>
+
+      {/* Sol sütun: Logo + LayerControl */}
+      <div
+        className={`absolute flex flex-col gap-3 pointer-events-none z-50 ${mobileMenuOpen ? "top-0 left-0 bottom-0 w-72 pt-16 pb-3" : "hidden md:flex md:top-6 md:left-6 md:z-20"}`}
+        style={{ maxHeight: mobileMenuOpen ? "100dvh" : "calc(100vh - 8rem)" }}
+      >
         <div className="pointer-events-auto">
           <Header />
         </div>
@@ -565,10 +587,11 @@ function AppIspark() {
         </div>
       </div>
 
-      {/* Üst orta: SearchBar + Clock + Kamera + Tema — aynı h-10, aynı glass */}
-      <div className="absolute top-6 left-1/2 -translate-x-1/2 z-30 flex items-center gap-2 pointer-events-auto">
+      {/* Üst bar: mobilde sadece SearchBar + tema, masaüstünde tam */}
+      <div className="absolute top-4 md:top-6 left-16 right-4 md:left-1/2 md:right-auto md:-translate-x-1/2 z-30 flex items-center gap-2 pointer-events-auto">
+        {/* Son güncelleme — sadece masaüstü */}
         {ispark.lastUpdated && (
-          <div className="h-10 flex items-center gap-1.5 px-3 rounded-xl border border-border/40 bg-background/80 backdrop-blur-md shadow-lg">
+          <div className="hidden md:flex h-10 items-center gap-1.5 px-3 rounded-xl border border-border/40 bg-background/80 backdrop-blur-md shadow-lg">
             <span className="text-[10px] font-medium text-muted-foreground/60 uppercase tracking-wide whitespace-nowrap">Güncelleme</span>
             <span className="text-sm font-mono font-bold text-foreground tabular-nums whitespace-nowrap">
               {new Date(ispark.lastUpdated).toLocaleDateString("tr-TR", { day: "numeric", month: "short" })}
@@ -585,22 +608,29 @@ function AppIspark() {
           onSelectResult={handleSearchSelect}
           onClear={search.clearSearch}
           onRadiusChange={search.setRadius}
+          className="flex-1 md:flex-none md:w-72"
         />
-        <IstanbulClock />
-        <CameraControlDropdown
-          bearingLocked={bearingLocked}
-          cameraLocked={cameraLocked}
-          onToggleBearingLock={() => {
-            if (!bearingLocked) setLockedBearing(viewState.bearing ?? 0);
-            setBearingLocked((s) => !s);
-          }}
-          onToggleCameraLock={() => setCameraLocked((s) => !s)}
-          onResetNorth={() => _onViewStateChange({ ...viewState, bearing: 0 })}
-        />
+        {/* Saat — sadece masaüstü */}
+        <div className="hidden md:block">
+          <IstanbulClock />
+        </div>
+        {/* Kamera kontrolleri — sadece masaüstü */}
+        <div className="hidden md:block">
+          <CameraControlDropdown
+            bearingLocked={bearingLocked}
+            cameraLocked={cameraLocked}
+            onToggleBearingLock={() => {
+              if (!bearingLocked) setLockedBearing(viewState.bearing ?? 0);
+              setBearingLocked((s) => !s);
+            }}
+            onToggleCameraLock={() => setCameraLocked((s) => !s)}
+            onResetNorth={() => _onViewStateChange({ ...viewState, bearing: 0 })}
+          />
+        </div>
         <button
           type="button"
           onClick={() => setMapTheme((t) => (t === "light" ? "dark" : "light"))}
-          className="h-10 w-10 flex items-center justify-center rounded-xl bg-background/80 backdrop-blur-md border border-border/40 shadow-lg text-muted-foreground hover:text-foreground transition-all hover:scale-105 active:scale-95"
+          className="h-10 w-10 flex items-center justify-center rounded-xl bg-background/80 backdrop-blur-md border border-border/40 shadow-lg text-muted-foreground hover:text-foreground transition-all hover:scale-105 active:scale-95 shrink-0"
           aria-label="Harita temasını değiştir"
         >
           {mapTheme === "light" ? <Moon size={16} /> : <Sun size={16} />}
@@ -616,7 +646,7 @@ function AppIspark() {
           if (document.fullscreenElement) document.exitFullscreen();
           else document.documentElement.requestFullscreen();
         }}
-        className="bottom-24 right-4"
+        className="bottom-20 right-4 md:bottom-24"
       />
 
       {selectedLot && (

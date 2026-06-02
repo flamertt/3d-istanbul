@@ -78,8 +78,10 @@ export function getActiveVehicles(
     const route = routes[trip.rk];
     if (!route || !filter(route.kind)) continue;
     const end = trip.t0 + route.duration_secs;
-    if (currentTimeSec < trip.t0 || currentTimeSec > end) continue;
-    const progress = (currentTimeSec - trip.t0) / route.duration_secs;
+    // Gece yarısı geçiş: sefer geç başladıysa ve şimdiki saat erken sabahsa
+    const adjTime = (trip.t0 > 75600 && currentTimeSec < 10800) ? currentTimeSec + 86400 : currentTimeSec;
+    if (adjTime < trip.t0 || adjTime > end) continue;
+    const progress = (adjTime - trip.t0) / route.duration_secs;
     const prev = best.get(trip.rk);
     if (!prev || Math.abs(progress - 0.5) < Math.abs(prev.progress - 0.5)) {
       best.set(trip.rk, { progress, t0: trip.t0 });

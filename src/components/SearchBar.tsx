@@ -1,6 +1,7 @@
 import { Search, X, Loader2 } from "lucide-react";
 import type { GeoResult } from "../lib/geocode";
 import { RADIUS_OPTIONS, type RadiusOption } from "../hooks/useSearch";
+import { cn } from "../lib/utils";
 
 interface SearchBarProps {
   query: string;
@@ -12,6 +13,7 @@ interface SearchBarProps {
   onSelectResult: (r: GeoResult) => void;
   onClear: () => void;
   onRadiusChange: (r: RadiusOption) => void;
+  className?: string;
 }
 
 export function SearchBar({
@@ -24,9 +26,10 @@ export function SearchBar({
   onSelectResult,
   onClear,
   onRadiusChange,
+  className,
 }: SearchBarProps) {
   return (
-    <div className="w-72 flex flex-col">
+    <div className={cn("w-72 flex flex-col", className)}>
       {/* Search input */}
       <div className="h-10 flex items-center rounded-xl border border-border/40 bg-background/80 backdrop-blur-md shadow-lg">
         <div className="flex h-full items-center justify-center px-3 text-muted-foreground">

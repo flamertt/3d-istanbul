@@ -73,7 +73,7 @@ export const LayerControl: React.FC<LayerControlProps> = ({
 }) => {
   return (
     <Card className={cn(
-      "w-72 flex-1 flex flex-col pointer-events-auto bg-background/80 backdrop-blur-md border border-border/40 shadow-lg overflow-hidden rounded-xl",
+      "w-full md:w-72 flex-1 flex flex-col pointer-events-auto bg-background/80 backdrop-blur-md border border-border/40 shadow-lg overflow-hidden rounded-xl",
       className
     )}>
       {/* Başlık alanı */}

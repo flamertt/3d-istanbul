@@ -1,4 +1,14 @@
 import { useState, useEffect } from "react";
+
+function useIsMobile() {
+  const [isMobile, setIsMobile] = useState(() => window.innerWidth < 768);
+  useEffect(() => {
+    const handler = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener("resize", handler);
+    return () => window.removeEventListener("resize", handler);
+  }, []);
+  return isMobile;
+}
 import { ChevronLeft, ChevronRight, ChevronDown, ChevronUp, Bus, TrainFront, Train, Ship } from "lucide-react";
 import type { ActiveBus } from "../layers/busSimLayer";
 import type { ActiveVehicle } from "../layers/railSimLayer";
@@ -34,6 +44,7 @@ export function BusListPanel({
   const [tab, setTab] = useState<Tab>("bus");
   const [page, setPage] = useState(0);
   const [collapsed, setCollapsed] = useState(false);
+  const isMobile = useIsMobile();
 
   const metro    = railVehicles.filter((v) => v.kind === "metro" || v.kind === "funicular");
   const marmaray = railVehicles.filter((v) => v.kind === "marmaray");
@@ -84,9 +95,27 @@ export function BusListPanel({
 
   return (
     <div
-      className="absolute top-6 right-6 flex flex-col pointer-events-auto bg-background/80 backdrop-blur-md border border-border/40 shadow-lg overflow-hidden rounded-xl"
-      style={{ zIndex: 25, width: 288, maxHeight: collapsed ? undefined : "calc(100vh - 8rem)" }}
+      className={
+        isMobile
+          ? "absolute bottom-0 left-0 right-0 flex flex-col pointer-events-auto bg-gray-950 border-t border-border/40 shadow-2xl overflow-hidden rounded-t-2xl"
+          : "absolute top-6 right-6 flex flex-col pointer-events-auto bg-background/80 backdrop-blur-md border border-border/40 shadow-lg overflow-hidden rounded-xl"
+      }
+      style={{
+        zIndex: 25,
+        ...(isMobile ? {} : { width: 288 }),
+        maxHeight: collapsed ? undefined : isMobile ? "50vh" : "calc(100vh - 8rem)",
+      }}
     >
+      {/* Mobile pill handle */}
+      {isMobile && (
+        <div
+          className="flex justify-center pt-2.5 pb-1 shrink-0 cursor-pointer"
+          onClick={() => setCollapsed((c) => !c)}
+        >
+          <div className="w-10 h-1 rounded-full bg-gray-600" />
+        </div>
+      )}
+
       {/* Header — LayerControl başlığıyla aynı stil */}
       <div
         className="px-4 py-3 border-b border-border/40 bg-muted/30 flex items-center gap-2 shrink-0 cursor-pointer select-none"

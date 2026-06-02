@@ -16,8 +16,8 @@ interface SidePanelProps {
 export function SidePanel({ title, subtitle, icon, accentColor, onClose, children, footer, className }: SidePanelProps) {
   return (
     <div className={cn(
-      "absolute top-0 right-0 bottom-0 z-40 w-80 flex flex-col panel-slide-in select-none",
-      "bg-background/95 backdrop-blur-xl border-l border-border/40 shadow-2xl",
+      "absolute top-0 right-0 bottom-0 z-40 w-full md:w-80 flex flex-col panel-slide-in select-none",
+      "bg-gray-950 border-l border-border/40 shadow-2xl",
       className
     )}>
       {/* Header — delivery tracker stili */}
