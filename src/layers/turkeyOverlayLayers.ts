@@ -314,7 +314,9 @@ export function createTurkeyOverlayLayers(
 ): Layer[] {
   const showLines = zoom >= 11;
   const showPolygons = zoom >= 10.5;
-  const showPoints = zoom >= 13;
+  const showMajorPoints = zoom >= 12; // raylı istasyonlar, deniz ulaşımı
+  const showMidPoints   = zoom >= 13; // otobüs dur., şarj, mikromobilite, minibüs
+  const showPoints      = zoom >= 14; // tuvalet, taksi, dolmuş, kent lok., sosyal
 
   const layers: Layer[] = [];
 
@@ -466,11 +468,12 @@ export function createTurkeyOverlayLayers(
           const isSelected = selectedId !== null && selectedId === normalizeKeyPart(p?.["ID"] || p?.["id"] || p?.["OBJECTID"]);
           return isSelected ? [255, 255, 255, 255] : [167, 139, 250, 240]; // Violet — otobüs mavisinden ayrışır
         },
-        lineWidthMinPixels: 2,
+        lineWidthMinPixels: 1,
+        lineWidthUnits: "pixels",
         getLineWidth: (f: unknown) => {
           const p = getFeatureProperties(f);
           const isSelected = selectedId !== null && selectedId === normalizeKeyPart(p?.["ID"] || p?.["id"] || p?.["OBJECTID"]);
-          return isSelected ? 14 : 6;
+          return isSelected ? 5 : 2;
         },
         updateTriggers: {
           getLineColor: [selectedId],
@@ -584,22 +587,22 @@ export function createTurkeyOverlayLayers(
 
   // Points as different 3D extruded shapes (deep zoom)
   // Not only height/radius; footprint geometry differs per POI type.
-  if (overlays.busStops && showPoints) {
+  if (overlays.busStops && showMidPoints) {
     const pts = cached(overlays.busStops, extractBusStops);
     layers.push(createPoiIconLayer("turkey-bus-stops-icons", pts, POI_ICON_URLS.busStop, 40, [255, 255, 255, 255]));
   }
 
-  if (overlays.railStations && showPoints) {
+  if (overlays.railStations && showMajorPoints) {
     const pts = cached(overlays.railStations, extractRailStations);
     layers.push(createPoiIconLayer("turkey-rail-stations-icons", pts, POI_ICON_URLS.railStation, 60, [255, 255, 255, 255]));
   }
 
-  if (overlays.evChargingStations && showPoints) {
+  if (overlays.evChargingStations && showMidPoints) {
     const pts = cached(overlays.evChargingStations, extractEvChargingStations);
     layers.push(createPoiIconLayer("turkey-ev-charging-icons", pts, POI_ICON_URLS.evCharging, 50, [255, 255, 255, 255]));
   }
 
-  if (overlays.micromobilityParks && showPoints) {
+  if (overlays.micromobilityParks && showMidPoints) {
     const pts = cached(overlays.micromobilityParks, extractMicromobilityParks);
     layers.push(createPoiIconLayer("turkey-micromobility-parks-icons", pts, POI_ICON_URLS.micromobility, 40, [255, 255, 255, 255]));
   }
@@ -619,13 +622,13 @@ export function createTurkeyOverlayLayers(
     layers.push(createPoiIconLayer("turkey-taxi-dolmus-stops-icons", pts, POI_ICON_URLS.taxiDolmus, 40, [255, 255, 255, 255]));
   }
 
-  if (overlays.minibusStops && showPoints) {
+  if (overlays.minibusStops && showMidPoints) {
     const pts = cached(overlays.minibusStops, extractMinibusStops);
     const elevation = POI_SHAPE_CONFIG.minibus_stop.elevationMeters;
     layers.push(createPoiIconLayer("turkey-minibus-stops-icons", pts, POI_ICON_URLS.minibus, elevation, [255, 255, 255, 255]));
   }
 
-  if (overlays.seaStations && showPoints) {
+  if (overlays.seaStations && showMajorPoints) {
     const pts = cached(overlays.seaStations, extractSeaStations);
     const elevation = POI_SHAPE_CONFIG.sea_station.elevationMeters;
     layers.push(createPoiIconLayer("turkey-sea-stations-icons", pts, POI_ICON_URLS.seaStation, elevation, [255, 255, 255, 255]));

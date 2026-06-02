@@ -110,17 +110,27 @@ for sid in shapes:
     shapes[sid] = [[lon,lat] for _,lon,lat in shapes[sid]]
 print(f"  {len(shapes)} shapes loaded")
 
+# ── 3b. Stops (isimler) ────────────────────────────────────────────────────────
+print("Reading stops…")
+stop_names = {}  # stop_id -> name
+with open(f'{BASE}/stops.csv', encoding='iso-8859-9') as f:
+    for r in csv.DictReader(f):
+        stop_names[r['stop_id']] = fix_str((r.get('stop_name') or '').strip())
+print(f"  {len(stop_names)} stops")
+
 # ── 4. Stop times ─────────────────────────────────────────────────────────────
 print("Reading stop_times…")
 needed_trips = set(selected.keys())
-trip_times = defaultdict(list)  # trip_id -> [(seq, dep_sec)]
+trip_times = defaultdict(list)  # trip_id -> [(seq, dep_sec, stop_name)]
 with open(f'{BASE}/stop_times.csv', encoding='iso-8859-9') as f:
     for r in csv.DictReader(f):
         tid = r.get('trip_id','')
         if tid not in needed_trips: continue
         dep = parse_time(r.get('departure_time',''))
         if dep < 0: continue
-        trip_times[tid].append((int(r.get('stop_sequence',0)), dep))
+        sid = r.get('stop_id','')
+        name = stop_names.get(sid, '')
+        trip_times[tid].append((int(r.get('stop_sequence',0)), dep, name))
 for tid in trip_times:
     trip_times[tid].sort()
 print(f"  stop_times for {len(trip_times)} trips")
@@ -172,6 +182,13 @@ for tid, info in selected.items():
 
     headway = trip_headway.get(tid, DEFAULT_HEADWAYS.get(short, 300))
 
+    # Durak listesi: [{name, elapsed_secs}] — t0'dan itibaren geçen süre
+    stop_list = [
+        {'name': name, 'elapsed_secs': dep - t0}
+        for _, dep, name in stops
+        if name  # isimsiz durakları atla
+    ]
+
     rk = f"{short}|{dir_}"
     route_defs[rk] = dict(
         name=short,
@@ -180,6 +197,7 @@ for tid, info in selected.items():
         kind=kind,
         path=downsample(path, 150),
         duration_secs=duration,
+        stops=stop_list,
     )
 
     # Generate start times throughout the day: 05:30 → 24:30

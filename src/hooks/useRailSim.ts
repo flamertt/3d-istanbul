@@ -1,5 +1,10 @@
 import { useEffect, useState } from "react";
 
+export interface RailStop {
+  name: string;
+  elapsed_secs: number; // t0'dan itibaren
+}
+
 export interface RailRoute {
   name: string;
   headsign: string;
@@ -7,6 +12,7 @@ export interface RailRoute {
   kind: "metro" | "marmaray" | "tram" | "funicular";
   path: [number, number][];
   duration_secs: number;
+  stops?: RailStop[];
 }
 
 export interface RailTrip {

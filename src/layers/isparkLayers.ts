@@ -109,15 +109,15 @@ export function createIsparkLayers(lots: IsparkLot[], zoom: number): Layer[] {
       sizeUnits: "pixels",
       getPosition: (d) =>
         showColumns
-          ? [d.lng, d.lat, getColumnElevation(d) + 60]
+          ? [d.lng, d.lat, getColumnElevation(d)]  // kolon üstünde
           : [d.lng, d.lat],
       getIcon: (d) => ({
         url: getIsparkIconUrl(d),
         width: 100,
         height: 100,
-        anchorY: 50,
+        anchorY: 100,  // ikonun altı kolon üstüne oturur
       }),
-      getSize: 14,
+      getSize: 26,
       getColor: [255, 255, 255],
       updateTriggers: { getPosition: zoom },
     }),

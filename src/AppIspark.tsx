@@ -79,7 +79,7 @@ function AppIspark() {
   });
 
   const [overlayFlags, setOverlayFlags] = useState<TurkeyOverlayFlags>({
-    busRoutes: true,
+    busRoutes: false,
     railLines: true,
     bikeLanes: false,
     greenAreas: true,
@@ -138,8 +138,13 @@ function AppIspark() {
   useEffect(() => { busTimeRef.current = busTimeSec; }, [busTimeSec]);
 
   const [layerTimeSec, setLayerTimeSec] = useState(getInitialBusSec);
+  const zoomRef = useRef(viewState.zoom);
+  useEffect(() => { zoomRef.current = viewState.zoom; }, [viewState.zoom]);
   useEffect(() => {
-    const id = setInterval(() => setLayerTimeSec(busTimeRef.current), 500);
+    // zoom < 10'da hareket fark edilmez, güncellemeyi durdur
+    const id = setInterval(() => {
+      if (zoomRef.current >= 10) setLayerTimeSec(busTimeRef.current);
+    }, 500);
     return () => clearInterval(id);
   }, []);
 
@@ -202,6 +207,8 @@ function AppIspark() {
 
   const {
     busRoutes,
+    busRoutesGeom,
+    greenAreasData,
     railLines,
     bikeLanes,
     greenAreas,
@@ -349,19 +356,19 @@ function AppIspark() {
     return createBusSimLayers(
       busSim.data.trips,
       layerTimeSec,
-      busRoutes ?? undefined,
+      busRoutesGeom ?? undefined,
       handleBusClick,
       viewState.zoom,
       selectedBus,
       bounds,
     );
-  }, [busSimEnabled, busSim.data, layerTimeSec, busRoutes, viewState.zoom, handleBusClick, selectedBus, bounds]);
+  }, [busSimEnabled, busSim.data, layerTimeSec, busRoutesGeom, viewState.zoom, handleBusClick, selectedBus, bounds]);
 
-  // Geom entries for worker — computed once when busRoutes GeoJSON loads
+  // Geom entries for worker — busRoutesGeom her zaman yüklü, toggle bağımsız
   const geomEntries = useMemo(() => {
-    if (!busRoutes) return [];
+    if (!busRoutesGeom) return [];
     const map: [string, [number, number][]][] = [];
-    for (const f of busRoutes.features) {
+    for (const f of busRoutesGeom.features) {
       const key = (f.properties?.HAT_KODU as string | undefined)?.trim();
       if (!key) continue;
       const g = f.geometry;
@@ -373,7 +380,7 @@ function AppIspark() {
       }
     }
     return map;
-  }, [busRoutes]);
+  }, [busRoutesGeom]);
 
   // Worker computes active buses off the main thread
   const activeBuses = useBusSimWorker(
@@ -594,6 +601,7 @@ function AppIspark() {
         <BusDetailPanel
           bus={selectedBus}
           currentTimeSec={busTimeSec}
+          stops={busSim.data?.stopsByRoute?.[selectedBus.route]}
           onClose={() => { setSelectedBus(null); setSelectedBusRouteProps(null); }}
         />
       )}
@@ -601,6 +609,7 @@ function AppIspark() {
       {selectedVehicle && !selectedBus && (
         <RailDetailPanel
           vehicle={selectedVehicle}
+          route={railSim.data?.routes[selectedVehicle.routeKey]}
           currentTimeSec={busTimeSec}
           onClose={() => setSelectedVehicle(null)}
         />
@@ -637,6 +646,7 @@ function AppIspark() {
         }}
         extraLayers={extraLayers}
         mapStyleUrl={mapStyleUrl}
+        greenAreasData={overlayFlags.greenAreas ? greenAreasData : null}
         />
 
     </div>

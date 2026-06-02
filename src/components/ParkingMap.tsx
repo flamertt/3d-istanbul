@@ -192,10 +192,11 @@ export function ParkingMap({
 
   const mapStyle = mapTheme === "light" ? MAP_STYLE_LIGHT : MAP_STYLE_DARK;
 
-  const handleMapLoad = useCallback((e: { target: { getStyle: () => { sources: Record<string, unknown> }; addLayer: (layer: object) => void } }) => {
+  const handleMapLoad = useCallback((e: { target: { getStyle: () => { sources: Record<string, unknown>; layers: { id: string; type: string }[] }; addLayer: (layer: object, beforeId?: string) => void } }) => {
     const map = e.target;
-    const sources = map.getStyle().sources;
-    const source = "openmaptiles" in sources ? "openmaptiles" : "carto";
+    const style = map.getStyle();
+    const source = "openmaptiles" in style.sources ? "openmaptiles" : "carto";
+    const firstSymbol = style.layers.find((l) => l.type === "symbol")?.id;
     map.addLayer({
       id: "3d-buildings",
       source,
@@ -204,11 +205,11 @@ export function ParkingMap({
       minzoom: 3,
       paint: {
         "fill-extrusion-color": mapTheme === "light" ? "#c8c0b8" : "#2a2a3a",
-        "fill-extrusion-height": ["*", ["coalesce", ["get", "render_height"], 10], 3],
-        "fill-extrusion-base": ["*", ["coalesce", ["get", "render_min_height"], 0], 3],
+        "fill-extrusion-height": ["*", ["coalesce", ["get", "render_height"], 10], 1.5],
+        "fill-extrusion-base": ["*", ["coalesce", ["get", "render_min_height"], 0], 1.5],
         "fill-extrusion-opacity": 1.0,
       },
-    });
+    }, firstSymbol);
   }, [mapTheme]);
 
   return (

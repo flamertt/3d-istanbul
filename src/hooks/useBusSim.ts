@@ -8,9 +8,15 @@ export interface BusTrip {
   timestamps: number[];
 }
 
+export interface BusStop {
+  name: string;
+  elapsed_secs: number;
+}
+
 export interface BusSimData {
   routes: Record<string, { name: string; color: [number, number, number] }>;
   trips: BusTrip[];
+  stopsByRoute?: Record<string, BusStop[]>;
 }
 
 // UTF-8 bytes were misread as Windows-1252, then re-encoded as UTF-8.
@@ -52,7 +58,22 @@ function fixEncoding(d: BusSimData): BusSimData {
     route: fixStr(t.route),
     headsign: fixStr(t.headsign),
   }));
-  return { routes, trips };
+
+  // stopsByRoute key'leri de encoding fix gerektiriyor
+  // (trip.route ile aynı şekilde fix edilmeli ki lookup çalışsın)
+  let stopsByRoute: BusSimData["stopsByRoute"];
+  if (d.stopsByRoute) {
+    stopsByRoute = {};
+    for (const [k, stops] of Object.entries(d.stopsByRoute)) {
+      const fixedKey = fixStr(k);
+      stopsByRoute[fixedKey] = stops.map((s) => ({
+        ...s,
+        name: fixStr(s.name),
+      }));
+    }
+  }
+
+  return { routes, trips, stopsByRoute };
 }
 
 export function useBusSim() {

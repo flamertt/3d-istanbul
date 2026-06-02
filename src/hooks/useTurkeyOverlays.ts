@@ -59,12 +59,15 @@ export function useTurkeyOverlays(flags: TurkeyOverlayFlags, zoom: number) {
   // Lines/polygons are visible around neighborhood/streets zoom.
   const showLines = zoom >= 11;
   const showPolygons = zoom >= 10.5;
-  // Points are visible at deeper zoom where clutter is acceptable.
-  const showPoints = zoom >= 14;
+  // POI LOD — kademeli açılım (otobus gibi)
+  const showMajorPoints = zoom >= 12; // raylı istasyonlar, deniz
+  const showMidPoints   = zoom >= 13; // otobüs durakları, şarj, mikromobilite
+  const showPoints      = zoom >= 14; // tuvalet, taksi, dolmuş, kent lok., sosyal
 
+  // busRoutes her zaman yüklenir (simülasyon geom snapping için gerekli)
   const busRoutes = useLazyFeatureCollection(
     "/data/turkey_overlays/bus_routes_freq.geojson",
-    flags.busRoutes && showLines,
+    true,
   );
   const railLines = useLazyFeatureCollection(
     "/data/turkey_overlays/rail_lines.geojson",
@@ -74,26 +77,27 @@ export function useTurkeyOverlays(flags: TurkeyOverlayFlags, zoom: number) {
     "/data/turkey_overlays/bike_lanes.geojson",
     flags.bikeLanes && showLines,
   );
+  // greenAreas her zaman yüklenir — MapLibre GL katmanı flag değişiminde hemen güncellenir
   const greenAreas = useLazyFeatureCollection(
     "/data/turkey_overlays/green_areas.geojson",
-    flags.greenAreas && showPolygons,
+    true,
   );
 
   const busStops = useLazyFeatureCollection(
     "/data/turkey_overlays/bus_stops.geojson",
-    flags.busStops && showPoints,
+    flags.busStops && showMidPoints,
   );
   const railStations = useLazyFeatureCollection(
     "/data/turkey_overlays/rail_stations.geojson",
-    flags.railStations && showPoints,
+    flags.railStations && showMajorPoints, // zoom 12+
   );
   const evChargingStations = useLazyFeatureCollection(
     "/data/turkey_overlays/ev_charging_stations.geojson",
-    flags.evChargingStations && showPoints,
+    flags.evChargingStations && showMidPoints,
   );
   const micromobilityParks = useLazyFeatureCollection(
     "/data/turkey_overlays/micromobility_parks.geojson",
-    flags.micromobilityParks && showPoints,
+    flags.micromobilityParks && showMidPoints,
   );
   const toilets = useLazyFeatureCollection(
     "/data/turkey_overlays/toilets.geojson",
@@ -114,11 +118,11 @@ export function useTurkeyOverlays(flags: TurkeyOverlayFlags, zoom: number) {
   );
   const minibusStops = useLazyFeatureCollection(
     "/data/turkey_overlays/minibus_stops.geojson",
-    flags.minibusStops && showPoints,
+    flags.minibusStops && showMidPoints,
   );
   const seaStations = useLazyFeatureCollection(
     "/data/turkey_overlays/sea_transport_stations.geojson",
-    flags.seaStations && showPoints,
+    flags.seaStations && showMajorPoints, // zoom 12+
   );
   const kentLokantasi = useLazyFeatureCollection(
     "/data/turkey_overlays/kent_lokantasi.geojson",
@@ -130,10 +134,12 @@ export function useTurkeyOverlays(flags: TurkeyOverlayFlags, zoom: number) {
   );
 
   return {
-    busRoutes: flags.busRoutes ? busRoutes.data : null,
+    busRoutes: flags.busRoutes ? busRoutes.data : null,  // görsel layer
+    busRoutesGeom: busRoutes.data,                       // simülasyon geom (her zaman)
     railLines: flags.railLines ? railLines.data : null,
     bikeLanes: flags.bikeLanes ? bikeLanes.data : null,
-    greenAreas: flags.greenAreas ? greenAreas.data : null,
+    greenAreas: null,        // deck.gl'de render edilmez — MapLibre GL katmanı kullanılıyor
+    greenAreasData: greenAreas.data,  // IsparkMap'e MapLibre GL için
 
     busStops: flags.busStops ? busStops.data : null,
     railStations: flags.railStations ? railStations.data : null,

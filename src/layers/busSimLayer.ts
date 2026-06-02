@@ -257,9 +257,38 @@ export function createBusSimLayers(
   }
   const geomMap = cachedRouteGeomMap ?? newRouteGeomMap();
   const allActive = computeActiveBuses(trips, currentTimeSec, geomMap);
-  const active = bounds
-    ? allActive.filter((b) => inBounds(b.position[0], b.position[1], bounds))
-    : allActive;
+
+  // LOD: zoom'a göre filtrele — ama seçili otobüs her zaman dahil
+  function applyLOD(buses: ActiveBus[]): ActiveBus[] {
+    const inView = bounds ? buses.filter((b) => inBounds(b.position[0], b.position[1], bounds)) : buses;
+    const selected = selectedBus;
+
+    if (zoom >= 12) return inView; // tümünü göster
+
+    // Küçük zoom → sadece "büyük" hatlar (kısa rota kodu)
+    const isMajor = (route: string) => /^\d{1,2}[A-ZÜŞĞÇÖI]?$/.test(route);
+    const major = inView.filter((b) => isMajor(b.route));
+
+    if (zoom >= 10) {
+      // zoom 10-12: büyük hatlar + seçili
+      const result = major.slice(0, 150);
+      if (selected && !result.some((b) => b.route === selected.route && b.headsign === selected.headsign)) {
+        const sel = inView.find((b) => b.route === selected.route && b.headsign === selected.headsign);
+        if (sel) result.push(sel);
+      }
+      return result;
+    }
+
+    // zoom < 10: az sayıda büyük hat (ama sıfır değil)
+    const result = major.slice(0, 40);
+    if (selected && !result.some((b) => b.route === selected.route && b.headsign === selected.headsign)) {
+      const sel = inView.find((b) => b.route === selected.route && b.headsign === selected.headsign);
+      if (sel) result.push(sel);
+    }
+    return result.length > 0 ? result : inView.slice(0, 20); // fallback: en az 20
+  }
+
+  const active = applyLOD(allActive);
 
   const selectedKey = selectedBus ? `${selectedBus.route}|${selectedBus.headsign}` : null;
   const isSelected = (d: ActiveBus) => selectedKey === `${d.route}|${d.headsign}`;
