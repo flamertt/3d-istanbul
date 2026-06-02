@@ -29,8 +29,9 @@ import { MapControls } from "./components/ui/map-ui";
 import { LayerControl } from "./components/LayerControl";
 import { IstanbulClock } from "./components/IstanbulClock";
 import { useBusSim } from "./hooks/useBusSim";
-import { createBusSimLayers } from "./layers/busSimLayer";
+import { createBusSimLayers, getActiveBuses } from "./layers/busSimLayer";
 import { BusDetailPanel } from "./components/BusDetailPanel";
+import { BusListPanel } from "./components/BusListPanel";
 import type { ActiveBus } from "./layers/busSimLayer";
 import type { TurkeyOverlayFlags } from "./hooks/useTurkeyOverlays";
 import { useEffect } from "react";
@@ -282,23 +283,29 @@ function AppIspark() {
     [landmarks, landmarkFlags, viewState.zoom, flyTo],
   );
 
+  const handleBusClick = useCallback((bus: ActiveBus) => {
+    setSelectedBus(bus);
+    setSelectedLot(null);
+    setSelectedPoi(null);
+    setSelectedBusRouteProps({ HAT_KODU: bus.route });
+    flyTo(bus.position[0], bus.position[1], 15);
+  }, [flyTo]);
+
   const busSimLayers = useMemo(() => {
     if (!busSimEnabled || !busSim.data) return [];
     return createBusSimLayers(
       busSim.data.trips,
       busTimeSec,
       busRoutes ?? undefined,
-      (bus) => {
-
-        setSelectedBus(bus);
-        setSelectedLot(null);
-        setSelectedPoi(null);
-        setSelectedBusRouteProps({ HAT_KODU: bus.route });
-        flyTo(bus.position[0], bus.position[1], 15);
-      },
+      handleBusClick,
       viewState.zoom,
     );
-  }, [busSimEnabled, busSim.data, busTimeSec, busRoutes, viewState.zoom]);
+  }, [busSimEnabled, busSim.data, busTimeSec, busRoutes, viewState.zoom, handleBusClick]);
+
+  const activeBuses = useMemo(() => {
+    if (!busSimEnabled || !busSim.data) return [];
+    return getActiveBuses(busSim.data.trips, busTimeSec, busRoutes ?? undefined);
+  }, [busSimEnabled, busSim.data, busTimeSec, busRoutes]);
 
   const extraLayers = useMemo(
     () => {
@@ -374,7 +381,7 @@ function AppIspark() {
       {/* Sol sütun: Logo + LayerControl aynı genişlikte */}
       <div className="absolute top-6 left-6 z-20 flex flex-col gap-3 pointer-events-none">
         <div className="pointer-events-auto">
-          <Header generated={ispark.lastUpdated} />
+          <Header />
         </div>
         <div className="pointer-events-auto">
         <LayerControl
@@ -393,6 +400,14 @@ function AppIspark() {
 
       {/* Üst orta: SearchBar + Clock + Kamera + Tema — aynı h-10, aynı glass */}
       <div className="absolute top-6 left-1/2 -translate-x-1/2 z-30 flex items-center gap-2 pointer-events-auto">
+        {ispark.lastUpdated && (
+          <div className="h-10 flex items-center gap-1.5 px-3 rounded-xl border border-border/40 bg-background/80 backdrop-blur-md shadow-lg">
+            <span className="text-[10px] font-medium text-muted-foreground/60 uppercase tracking-wide whitespace-nowrap">Güncelleme</span>
+            <span className="text-sm font-mono font-bold text-foreground tabular-nums whitespace-nowrap">
+              {new Date(ispark.lastUpdated).toLocaleDateString("tr-TR", { day: "numeric", month: "short" })}
+            </span>
+          </div>
+        )}
         <SearchBar
           query={search.query}
           results={search.results}
@@ -443,6 +458,14 @@ function AppIspark() {
           onClose={() => { setSelectedLot(null); clearRoute(); }}
           onGetDirections={getDirections}
           route={route}
+        />
+      )}
+
+      {busSimEnabled && (
+        <BusListPanel
+          buses={activeBuses}
+          selectedBus={selectedBus}
+          onBusClick={handleBusClick}
         />
       )}
 

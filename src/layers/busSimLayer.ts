@@ -146,26 +146,15 @@ function tripProgressWithDwell(timestamps: number[], timeSec: number): number {
   return totalMoveDur === 0 ? 1 : Math.min(1, elapsedMoveDur / totalMoveDur);
 }
 
-// ── Main export ────────────────────────────────────────────────────────────────
+// ── Active buses helper ────────────────────────────────────────────────────────
 let cachedRouteGeomMap: RouteGeomMap | null = null;
 let cachedGeojsonRef: unknown = null;
 
-export function createBusSimLayers(
+function computeActiveBuses(
   trips: BusTrip[],
   currentTimeSec: number,
-  busRoutesGeojson?: GeoJSON.FeatureCollection | null,
-  onBusClick?: (bus: ActiveBus) => void,
-  zoom = 12,
-): Layer[] {
-  // Re-build geom map only when data reference changes
-  if (busRoutesGeojson !== cachedGeojsonRef) {
-    cachedGeojsonRef = busRoutesGeojson;
-    cachedRouteGeomMap = buildRouteGeomMap(busRoutesGeojson);
-  }
-  const geomMap = cachedRouteGeomMap ?? newRouteGeomMap();
-
-  // Compute one representative bus per route+headsign
-  // Among all active trips for a route, pick the one closest to 50% progress
+  geomMap: RouteGeomMap,
+): ActiveBus[] {
   type Candidate = { progress: number; trip: BusTrip };
   const routeBest = new Map<string, Candidate>();
 
@@ -175,11 +164,10 @@ export function createBusSimLayers(
     const t0 = timestamps[0], t1 = timestamps[timestamps.length - 1];
     if (currentTimeSec < t0 || currentTimeSec > t1) continue;
     const duration = t1 - t0;
-    if (duration < 900) continue; // < 15 dakikalık çok kısa seferleri atla
+    if (duration < 900) continue;
     const progress = tripProgressWithDwell(trip.timestamps, currentTimeSec);
     const key = `${trip.route}|${trip.headsign}`;
     const existing = routeBest.get(key);
-    // Prefer bus closest to 50% (mid-route is most visible)
     if (!existing || Math.abs(progress - 0.5) < Math.abs(existing.progress - 0.5)) {
       routeBest.set(key, { progress, trip });
     }
@@ -207,6 +195,35 @@ export function createBusSimLayers(
       timestamps: trip.timestamps,
     });
   }
+  return active;
+}
+
+export function getActiveBuses(
+  trips: BusTrip[],
+  currentTimeSec: number,
+  busRoutesGeojson?: GeoJSON.FeatureCollection | null,
+): ActiveBus[] {
+  if (busRoutesGeojson !== cachedGeojsonRef) {
+    cachedGeojsonRef = busRoutesGeojson;
+    cachedRouteGeomMap = buildRouteGeomMap(busRoutesGeojson);
+  }
+  return computeActiveBuses(trips, currentTimeSec, cachedRouteGeomMap ?? newRouteGeomMap());
+}
+
+// ── Main export ────────────────────────────────────────────────────────────────
+export function createBusSimLayers(
+  trips: BusTrip[],
+  currentTimeSec: number,
+  busRoutesGeojson?: GeoJSON.FeatureCollection | null,
+  onBusClick?: (bus: ActiveBus) => void,
+  zoom = 12,
+): Layer[] {
+  if (busRoutesGeojson !== cachedGeojsonRef) {
+    cachedGeojsonRef = busRoutesGeojson;
+    cachedRouteGeomMap = buildRouteGeomMap(busRoutesGeojson);
+  }
+  const geomMap = cachedRouteGeomMap ?? newRouteGeomMap();
+  const active = computeActiveBuses(trips, currentTimeSec, geomMap);
 
   return [
     new IconLayer<ActiveBus>({
