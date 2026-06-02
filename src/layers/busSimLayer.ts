@@ -217,6 +217,7 @@ export function createBusSimLayers(
   busRoutesGeojson?: GeoJSON.FeatureCollection | null,
   onBusClick?: (bus: ActiveBus) => void,
   zoom = 12,
+  selectedBus?: ActiveBus | null,
 ): Layer[] {
   if (busRoutesGeojson !== cachedGeojsonRef) {
     cachedGeojsonRef = busRoutesGeojson;
@@ -224,6 +225,10 @@ export function createBusSimLayers(
   }
   const geomMap = cachedRouteGeomMap ?? newRouteGeomMap();
   const active = computeActiveBuses(trips, currentTimeSec, geomMap);
+
+  const selectedKey = selectedBus ? `${selectedBus.route}|${selectedBus.headsign}` : null;
+  const isSelected = (d: ActiveBus) => selectedKey === `${d.route}|${d.headsign}`;
+  const baseAlpha = zoom < 9 ? 0 : Math.round(40 + Math.max(0, Math.min(1, (zoom - 10) / 4)) * 215);
 
   return [
     new IconLayer<ActiveBus>({
@@ -238,13 +243,19 @@ export function createBusSimLayers(
         height: 100,
         anchorY: 50,
       }),
-      getSize: 28,
-      // Uzaktan soluk, yakınlaştıkça belirginleşir
-      getColor: zoom < 9 ? [0, 0, 0, 0] : [255, 255, 255, Math.round(40 + Math.max(0, Math.min(1, (zoom - 10) / 4)) * 215)],
+      getSize: (d) => isSelected(d) ? 52 : 28,
+      getColor: (d) => isSelected(d)
+        ? [255, 255, 255, 255]
+        : [255, 255, 255, baseAlpha],
       onClick: (info) => {
         if (info.object && onBusClick) onBusClick(info.object);
       },
-      updateTriggers: { getPosition: currentTimeSec, data: currentTimeSec, getColor: zoom },
+      updateTriggers: {
+        getPosition: currentTimeSec,
+        data: currentTimeSec,
+        getColor: [zoom, selectedKey],
+        getSize: selectedKey,
+      },
     }),
   ];
 }

@@ -97,16 +97,9 @@ export const LayerControl: React.FC<LayerControlProps> = ({
                   color="blue"
                 />
               )}
-              <LayerItem 
-                 icon={<Trees size={16} />} 
-                 label="Yeşil Alanlar" 
-                 checked={overlayFlags.greenAreas} 
-                 onCheckedChange={() => toggleFlag("greenAreas")} 
-                 color="emerald"
-              />
             </AccordionContent>
           </AccordionItem>
-          
+
           {/* Ulaşım Katmanları */}
           <AccordionItem value="transport" className="border-gray-800/50 px-2">
             <AccordionTrigger className="text-[11px] uppercase tracking-wider text-gray-400 hover:no-underline py-3">
@@ -117,18 +110,21 @@ export const LayerControl: React.FC<LayerControlProps> = ({
               <LayerItem icon={<Train size={16} />} label="Raylı Hatlar" checked={overlayFlags.railLines} onCheckedChange={() => toggleFlag("railLines")} color="violet" />
               <LayerItem icon={<TrainFront size={16} />} label="Raylı İstasyonlar" checked={overlayFlags.railStations} onCheckedChange={() => toggleFlag("railStations")} color="violet" />
               <LayerItem icon={<Ship size={16} />} label="Deniz İstasyonları" checked={overlayFlags.seaStations} onCheckedChange={() => toggleFlag("seaStations")} color="cyan" />
-              
+
               <div className="text-[10px] text-gray-500 font-semibold px-2 py-1 mt-2 uppercase tracking-tighter">Otobüs & Minibüs</div>
               <LayerItem icon={<Bus size={16} />} label="Otobüs Hatları" checked={overlayFlags.busRoutes} onCheckedChange={() => toggleFlag("busRoutes")} color="blue" />
               <LayerItem icon={<MapPin size={16} />} label="Otobüs Durakları" checked={overlayFlags.busStops} onCheckedChange={() => toggleFlag("busStops")} color="blue" />
               <LayerItem icon={<Bus size={16} className="opacity-70" />} label="Minibüs Hatları" checked={overlayFlags.minibusRoutes} onCheckedChange={() => toggleFlag("minibusRoutes")} color="teal" />
               <LayerItem icon={<MapPin size={16} className="opacity-70" />} label="Minibüs Durakları" checked={overlayFlags.minibusStops} onCheckedChange={() => toggleFlag("minibusStops")} color="teal" />
-              
+
               <div className="text-[10px] text-gray-500 font-semibold px-2 py-1 mt-2 uppercase tracking-tighter">Diğer</div>
               <LayerItem icon={<Bike size={16} />} label="Bisiklet Yolları" checked={overlayFlags.bikeLanes} onCheckedChange={() => toggleFlag("bikeLanes")} color="teal" />
               <LayerItem icon={<Waypoints size={16} />} label="Mikromobilite" checked={overlayFlags.micromobilityParks} onCheckedChange={() => toggleFlag("micromobilityParks")} color="orange" />
               <LayerItem icon={<Car size={16} />} label="Taksi Durakları" checked={overlayFlags.taxiStops} onCheckedChange={() => toggleFlag("taxiStops")} color="fuchsia" />
               <LayerItem icon={<Navigation size={16} />} label="Dolmuş Durakları" checked={overlayFlags.taxiDolmusStops} onCheckedChange={() => toggleFlag("taxiDolmusStops")} color="rose" />
+              <LayerItem icon={<Zap size={16} />} label="Şarj İstasyonları" checked={overlayFlags.evChargingStations} onCheckedChange={() => toggleFlag("evChargingStations")} color="amber" />
+              <LayerItem icon={<Trees size={16} />} label="Yeşil Alanlar" checked={overlayFlags.greenAreas} onCheckedChange={() => toggleFlag("greenAreas")} color="emerald" />
+              <LayerItem icon={<PersonStanding size={16} />} label="Halka Açık Tuvaletler" checked={overlayFlags.toilets} onCheckedChange={() => toggleFlag("toilets")} color="rose" />
             </AccordionContent>
           </AccordionItem>
 
@@ -137,7 +133,7 @@ export const LayerControl: React.FC<LayerControlProps> = ({
             <AccordionTrigger className="text-[11px] uppercase tracking-wider text-gray-400 hover:no-underline py-3">
               Simgesel Yapılar
             </AccordionTrigger>
-            <AccordionContent className="space-y-1">
+            <AccordionContent className="space-y-1 pb-4">
               <LayerItem icon={<Moon size={16} />} label="Cami" checked={landmarkFlags.mosque} onCheckedChange={() => toggleLandmark("mosque")} color="blue" />
               <LayerItem icon={<School size={16} />} label="Müze" checked={landmarkFlags.museum} onCheckedChange={() => toggleLandmark("museum")} color="purple" />
               <LayerItem icon={<Castle size={16} />} label="Hisar / Kale" checked={landmarkFlags.castle} onCheckedChange={() => toggleLandmark("castle")} color="red" />
@@ -148,17 +144,6 @@ export const LayerControl: React.FC<LayerControlProps> = ({
               <LayerItem icon={<Building2 size={16} />} label="AVM" checked={landmarkFlags.mall} onCheckedChange={() => toggleLandmark("mall")} color="pink" />
               <LayerItem icon={<Trophy size={16} />} label="Stadyum" checked={landmarkFlags.stadium} onCheckedChange={() => toggleLandmark("stadium")} color="green" />
               <LayerItem icon={<LibraryIcon size={16} />} label="Kütüphane" checked={landmarkFlags.library} onCheckedChange={() => toggleLandmark("library")} color="lime" />
-            </AccordionContent>
-          </AccordionItem>
-          
-          {/* Tesisler */}
-          <AccordionItem value="facilities" className="border-gray-800/50 border-b-0 px-2">
-            <AccordionTrigger className="text-[11px] uppercase tracking-wider text-gray-400 hover:no-underline py-3">
-              Sosyo-Teknik Tesisler
-            </AccordionTrigger>
-            <AccordionContent className="space-y-1 pb-4">
-               <LayerItem icon={<Zap size={16} />} label="Şarj İstasyonları" checked={overlayFlags.evChargingStations} onCheckedChange={() => toggleFlag("evChargingStations")} color="amber" />
-               <LayerItem icon={<PersonStanding size={16} />} label="Halka Açık Tuvaletler" checked={overlayFlags.toilets} onCheckedChange={() => toggleFlag("toilets")} color="rose" />
             </AccordionContent>
           </AccordionItem>
         </Accordion> {/* <- </Accordion> buraya taşınarak tüm Item'ları sarmalaması sağlandı */}

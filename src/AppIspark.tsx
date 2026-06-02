@@ -80,9 +80,9 @@ function AppIspark() {
     greenAreas: false,
     busStops: false,
     railStations: false,
-    evChargingStations: true,
+    evChargingStations: false,
     micromobilityParks: false,
-    toilets: true,
+    toilets: false,
     taxiStops: false,
     taxiDolmusStops: false,
     minibusRoutes: false,
@@ -299,8 +299,9 @@ function AppIspark() {
       busRoutes ?? undefined,
       handleBusClick,
       viewState.zoom,
+      selectedBus,
     );
-  }, [busSimEnabled, busSim.data, busTimeSec, busRoutes, viewState.zoom, handleBusClick]);
+  }, [busSimEnabled, busSim.data, busTimeSec, busRoutes, viewState.zoom, handleBusClick, selectedBus]);
 
   const activeBuses = useMemo(() => {
     if (!busSimEnabled || !busSim.data) return [];
