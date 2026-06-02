@@ -155,9 +155,7 @@ function ensureTripIndex(trips: BusTrip[]) {
   maxTripDuration = max || 7200;
 }
 
-function getWindowTrips(currentTimeSec: number): BusTrip[] {
-  const lo = currentTimeSec - maxTripDuration;
-  const hi = currentTimeSec;
+function binarySlice(lo: number, hi: number): BusTrip[] {
   let left = 0, right = sortedTrips.length;
   while (left < right) {
     const mid = (left + right) >> 1;
@@ -172,6 +170,17 @@ function getWindowTrips(currentTimeSec: number): BusTrip[] {
     else right = mid;
   }
   return sortedTrips.slice(start, left);
+}
+
+function getWindowTrips(currentTimeSec: number): BusTrip[] {
+  const lo = Math.max(0, currentTimeSec - maxTripDuration);
+  const result = binarySlice(lo, currentTimeSec);
+  // Gece yarısı sonrası: önceki günden devam eden seferleri de dahil et
+  if (currentTimeSec < 10800) {
+    const overnight = binarySlice(86400 - maxTripDuration, 86400);
+    return [...result, ...overnight];
+  }
+  return result;
 }
 
 // ── Active buses helper ────────────────────────────────────────────────────────
@@ -191,10 +200,12 @@ function computeActiveBuses(
     const { timestamps } = trip;
     if (!timestamps.length) continue;
     const t0 = timestamps[0], t1 = timestamps[timestamps.length - 1];
-    if (currentTimeSec < t0 || currentTimeSec > t1) continue;
+    // Gece yarısı geçiş: sefer geç başladıysa ve şimdiki saat erken sabahsa
+    const adjTime = (t0 > 75600 && currentTimeSec < 10800) ? currentTimeSec + 86400 : currentTimeSec;
+    if (adjTime < t0 || adjTime > t1) continue;
     const duration = t1 - t0;
     if (duration < 900) continue;
-    const progress = tripProgressWithDwell(trip.timestamps, currentTimeSec);
+    const progress = tripProgressWithDwell(trip.timestamps, adjTime);
     const key = `${trip.route}|${trip.headsign}`;
     const existing = routeBest.get(key);
     if (!existing || Math.abs(progress - 0.5) < Math.abs(existing.progress - 0.5)) {
@@ -206,10 +217,12 @@ function computeActiveBuses(
   for (const { progress, trip } of routeBest.values()) {
     const geom = geomMap.get(trip.route);
     let pos: Coord;
+    const t0b = trip.timestamps[0];
+    const adjTimeFb = (t0b > 75600 && currentTimeSec < 10800) ? currentTimeSec + 86400 : currentTimeSec;
     if (geom) {
       pos = snapToRoute(progress, geom);
     } else {
-      const fallback = interpolatePosition(trip, currentTimeSec);
+      const fallback = interpolatePosition(trip, adjTimeFb);
       if (!fallback) continue;
       pos = fallback;
     }
@@ -263,7 +276,16 @@ export function createBusSimLayers(
     const inView = bounds ? buses.filter((b) => inBounds(b.position[0], b.position[1], bounds)) : buses;
     const selected = selectedBus;
 
-    if (zoom >= 12) return inView; // tümünü göster
+    // Seçili otobüsü her zaman dahil et (flyTo animasyonu sırasında bounds dışında kalabilir)
+    function ensureSelected(list: ActiveBus[]): ActiveBus[] {
+      if (!selected) return list;
+      const selKey = `${selected.route}|${selected.headsign}`;
+      if (list.some((b) => `${b.route}|${b.headsign}` === selKey)) return list;
+      const sel = buses.find((b) => `${b.route}|${b.headsign}` === selKey);
+      return sel ? [...list, sel] : list;
+    }
+
+    if (zoom >= 12) return ensureSelected(inView); // tümünü göster
 
     // Küçük zoom → sadece "büyük" hatlar (kısa rota kodu)
     const isMajor = (route: string) => /^\d{1,2}[A-ZÜŞĞÇÖI]?$/.test(route);
@@ -271,21 +293,12 @@ export function createBusSimLayers(
 
     if (zoom >= 10) {
       // zoom 10-12: büyük hatlar + seçili
-      const result = major.slice(0, 150);
-      if (selected && !result.some((b) => b.route === selected.route && b.headsign === selected.headsign)) {
-        const sel = inView.find((b) => b.route === selected.route && b.headsign === selected.headsign);
-        if (sel) result.push(sel);
-      }
-      return result;
+      return ensureSelected(major.slice(0, 150));
     }
 
     // zoom < 10: az sayıda büyük hat (ama sıfır değil)
-    const result = major.slice(0, 40);
-    if (selected && !result.some((b) => b.route === selected.route && b.headsign === selected.headsign)) {
-      const sel = inView.find((b) => b.route === selected.route && b.headsign === selected.headsign);
-      if (sel) result.push(sel);
-    }
-    return result.length > 0 ? result : inView.slice(0, 20); // fallback: en az 20
+    const limited = major.slice(0, 40);
+    return ensureSelected(limited.length > 0 ? limited : inView.slice(0, 20));
   }
 
   const active = applyLOD(allActive);
