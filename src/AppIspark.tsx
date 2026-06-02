@@ -29,7 +29,8 @@ import { MapControls } from "./components/ui/map-ui";
 import { LayerControl } from "./components/LayerControl";
 import { IstanbulClock } from "./components/IstanbulClock";
 import { useBusSim } from "./hooks/useBusSim";
-import { createBusSimLayers, getActiveBuses } from "./layers/busSimLayer";
+import { createBusSimLayers } from "./layers/busSimLayer";
+import { useBusSimWorker } from "./hooks/useBusSimWorker";
 import { BusDetailPanel } from "./components/BusDetailPanel";
 import { RailDetailPanel } from "./components/RailDetailPanel";
 import { BusListPanel } from "./components/BusListPanel";
@@ -138,7 +139,7 @@ function AppIspark() {
 
   const [layerTimeSec, setLayerTimeSec] = useState(getInitialBusSec);
   useEffect(() => {
-    const id = setInterval(() => setLayerTimeSec(busTimeRef.current), 200);
+    const id = setInterval(() => setLayerTimeSec(busTimeRef.current), 500);
     return () => clearInterval(id);
   }, []);
 
@@ -345,10 +346,31 @@ function AppIspark() {
     );
   }, [busSimEnabled, busSim.data, layerTimeSec, busRoutes, viewState.zoom, handleBusClick, selectedBus]);
 
-  const activeBuses = useMemo(() => {
-    if (!busSimEnabled || !busSim.data) return [];
-    return getActiveBuses(busSim.data.trips, listTimeSec, busRoutes ?? undefined);
-  }, [busSimEnabled, busSim.data, listTimeSec, busRoutes]);
+  // Geom entries for worker — computed once when busRoutes GeoJSON loads
+  const geomEntries = useMemo(() => {
+    if (!busRoutes) return [];
+    const map: [string, [number, number][]][] = [];
+    for (const f of busRoutes.features) {
+      const key = (f.properties?.HAT_KODU as string | undefined)?.trim();
+      if (!key) continue;
+      const g = f.geometry;
+      if (g.type === "LineString") map.push([key, g.coordinates as [number, number][]]);
+      else if (g.type === "MultiLineString") {
+        const segs = g.coordinates as [number, number][][];
+        const longest = segs.reduce((a, b) => a.length >= b.length ? a : b);
+        map.push([key, longest]);
+      }
+    }
+    return map;
+  }, [busRoutes]);
+
+  // Worker computes active buses off the main thread
+  const activeBuses = useBusSimWorker(
+    busSimEnabled ? busSim.data : null,
+    listTimeSec,
+    geomEntries,
+    busSimEnabled,
+  );
 
   const railFilter = useCallback((kind: string) => {
     if (kind === "metro" || kind === "funicular") return metroSimEnabled;

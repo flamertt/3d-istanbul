@@ -107,6 +107,15 @@ function extractPointFeatures(fc: FeatureCollection) {
   });
 }
 
+// WeakMap cache: GeoJSON referansı değişmediğinde extract tekrar çalışmaz
+const extractCache = new WeakMap<FeatureCollection, TurkeyPoiPoint[]>();
+function cached(fc: FeatureCollection, fn: (f: FeatureCollection) => TurkeyPoiPoint[]): TurkeyPoiPoint[] {
+  if (extractCache.has(fc)) return extractCache.get(fc)!;
+  const result = fn(fc);
+  extractCache.set(fc, result);
+  return result;
+}
+
 function extractBusStops(fc: FeatureCollection): TurkeyPoiPoint[] {
   return extractPointFeatures(fc).map(({ position, properties }) => ({
     kind: "bus_stop",
@@ -576,48 +585,48 @@ export function createTurkeyOverlayLayers(
   // Points as different 3D extruded shapes (deep zoom)
   // Not only height/radius; footprint geometry differs per POI type.
   if (overlays.busStops && showPoints) {
-    const pts = extractBusStops(overlays.busStops);
+    const pts = cached(overlays.busStops, extractBusStops);
     layers.push(createPoiIconLayer("turkey-bus-stops-icons", pts, POI_ICON_URLS.busStop, 40, [255, 255, 255, 255]));
   }
 
   if (overlays.railStations && showPoints) {
-    const pts = extractRailStations(overlays.railStations);
+    const pts = cached(overlays.railStations, extractRailStations);
     layers.push(createPoiIconLayer("turkey-rail-stations-icons", pts, POI_ICON_URLS.railStation, 60, [255, 255, 255, 255]));
   }
 
   if (overlays.evChargingStations && showPoints) {
-    const pts = extractEvChargingStations(overlays.evChargingStations);
+    const pts = cached(overlays.evChargingStations, extractEvChargingStations);
     layers.push(createPoiIconLayer("turkey-ev-charging-icons", pts, POI_ICON_URLS.evCharging, 50, [255, 255, 255, 255]));
   }
 
   if (overlays.micromobilityParks && showPoints) {
-    const pts = extractMicromobilityParks(overlays.micromobilityParks);
+    const pts = cached(overlays.micromobilityParks, extractMicromobilityParks);
     layers.push(createPoiIconLayer("turkey-micromobility-parks-icons", pts, POI_ICON_URLS.micromobility, 40, [255, 255, 255, 255]));
   }
 
   if (overlays.toilets && showPoints) {
-    const pts = extractToilets(overlays.toilets);
+    const pts = cached(overlays.toilets, extractToilets);
     layers.push(createPoiIconLayer("turkey-toilets-icons", pts, POI_ICON_URLS.toilet, 30, [255, 255, 255, 255]));
   }
 
   if (overlays.taxiStops && showPoints) {
-    const pts = extractTaxiStops(overlays.taxiStops);
+    const pts = cached(overlays.taxiStops, extractTaxiStops);
     layers.push(createPoiIconLayer("turkey-taxi-stops-icons", pts, POI_ICON_URLS.taxi, 40, [255, 255, 255, 255]));
   }
 
   if (overlays.taxiDolmusStops && showPoints) {
-    const pts = extractTaxiDolmusStops(overlays.taxiDolmusStops);
+    const pts = cached(overlays.taxiDolmusStops, extractTaxiDolmusStops);
     layers.push(createPoiIconLayer("turkey-taxi-dolmus-stops-icons", pts, POI_ICON_URLS.taxiDolmus, 40, [255, 255, 255, 255]));
   }
 
   if (overlays.minibusStops && showPoints) {
-    const pts = extractMinibusStops(overlays.minibusStops);
+    const pts = cached(overlays.minibusStops, extractMinibusStops);
     const elevation = POI_SHAPE_CONFIG.minibus_stop.elevationMeters;
     layers.push(createPoiIconLayer("turkey-minibus-stops-icons", pts, POI_ICON_URLS.minibus, elevation, [255, 255, 255, 255]));
   }
 
   if (overlays.seaStations && showPoints) {
-    const pts = extractSeaStations(overlays.seaStations);
+    const pts = cached(overlays.seaStations, extractSeaStations);
     const elevation = POI_SHAPE_CONFIG.sea_station.elevationMeters;
     layers.push(createPoiIconLayer("turkey-sea-stations-icons", pts, POI_ICON_URLS.seaStation, elevation, [255, 255, 255, 255]));
   }

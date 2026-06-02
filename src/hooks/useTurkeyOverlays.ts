@@ -60,7 +60,7 @@ export function useTurkeyOverlays(flags: TurkeyOverlayFlags, zoom: number) {
   const showLines = zoom >= 11;
   const showPolygons = zoom >= 10.5;
   // Points are visible at deeper zoom where clutter is acceptable.
-  const showPoints = zoom >= 13;
+  const showPoints = zoom >= 14;
 
   const busRoutes = useLazyFeatureCollection(
     "/data/turkey_overlays/bus_routes_freq.geojson",

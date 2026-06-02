@@ -79,7 +79,7 @@ function snapToRoute(progress: number, coords: Coord[]): Coord {
 }
 
 // Durak başına simüle edilen bekleme süresi (saniye)
-const DWELL_SEC = 90;
+const DWELL_SEC = 45;
 
 // ── Interpolation: durak bekleme süresiyle birlikte ───────────────────────────
 // Her ara durakta DWELL_SEC kadar bekler, sonra hareket eder.
