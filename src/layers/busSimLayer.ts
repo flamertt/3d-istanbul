@@ -1,6 +1,7 @@
 import { IconLayer } from "@deck.gl/layers";
 import type { Layer } from "deck.gl";
 import type { BusTrip } from "../hooks/useBusSim";
+import { buildCircleIcon, ICON_PATHS } from "../lib/iconBuilder";
 
 type Coord = [number, number];
 
@@ -15,27 +16,16 @@ export interface ActiveBus {
   timestamps: number[];
 }
 
-// ── Icon builder ───────────────────────────────────────────────────────────────
+// ── Icon builder — circle style matching landmark icons ────────────────────────
 const iconCache = new Map<string, string>();
-function getBusIcon(color: [number, number, number]): string {
-  const key = color.join(",");
-  if (iconCache.has(key)) return iconCache.get(key)!;
-  const stroke = `rgb(${color[0]},${color[1]},${color[2]})`;
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100">
-    <circle cx="50" cy="50" r="46" fill="#030712" stroke="${stroke}" stroke-width="8"/>
-    <g transform="translate(22,26)" stroke="none">
-      <rect x="2" y="5" width="52" height="28" rx="6" fill="white"/>
-      <rect x="6" y="10" width="19" height="10" rx="2" fill="${stroke}" opacity="0.8"/>
-      <rect x="32" y="10" width="19" height="10" rx="2" fill="${stroke}" opacity="0.8"/>
-      <circle cx="15" cy="36" r="5" fill="white"/>
-      <circle cx="41" cy="36" r="5" fill="white"/>
-      <rect x="3" y="2" width="50" height="5" rx="2.5" fill="white" opacity="0.6"/>
-    </g>
-  </svg>`;
-  const url = "data:image/svg+xml;utf8," + encodeURIComponent(svg);
-  iconCache.set(key, url);
-  return url;
+// Tüm otobüsler mavi border
+const BUS_ICON_URL = buildCircleIcon(ICON_PATHS.bus, "#2563eb", 2.4);
+
+function getBusIcon(_color: [number, number, number]): string {
+  return BUS_ICON_URL;
 }
+
+const BUS_ICON_SIZE = 100;
 
 // ── Route geometry snap ────────────────────────────────────────────────────────
 type RouteGeomMap = Map<string, Coord[]>;
@@ -146,6 +136,42 @@ function tripProgressWithDwell(timestamps: number[], timeSec: number): number {
   return totalMoveDur === 0 ? 1 : Math.min(1, elapsedMoveDur / totalMoveDur);
 }
 
+// ── Sorted trip index (one-time build, O(log n) lookup) ───────────────────────
+let cachedTripIndex: BusTrip[] | null = null;
+let sortedTrips: BusTrip[] = [];
+let maxTripDuration = 7200;
+
+function ensureTripIndex(trips: BusTrip[]) {
+  if (trips === cachedTripIndex) return;
+  cachedTripIndex = trips;
+  sortedTrips = [...trips].sort((a, b) => (a.timestamps[0] ?? 0) - (b.timestamps[0] ?? 0));
+  let max = 0;
+  for (const t of trips) {
+    const dur = (t.timestamps[t.timestamps.length - 1] ?? 0) - (t.timestamps[0] ?? 0);
+    if (dur > max) max = dur;
+  }
+  maxTripDuration = max || 7200;
+}
+
+function getWindowTrips(currentTimeSec: number): BusTrip[] {
+  const lo = currentTimeSec - maxTripDuration;
+  const hi = currentTimeSec;
+  let left = 0, right = sortedTrips.length;
+  while (left < right) {
+    const mid = (left + right) >> 1;
+    if ((sortedTrips[mid].timestamps[0] ?? 0) < lo) left = mid + 1;
+    else right = mid;
+  }
+  const start = left;
+  left = start; right = sortedTrips.length;
+  while (left < right) {
+    const mid = (left + right) >> 1;
+    if ((sortedTrips[mid].timestamps[0] ?? 0) <= hi) left = mid + 1;
+    else right = mid;
+  }
+  return sortedTrips.slice(start, left);
+}
+
 // ── Active buses helper ────────────────────────────────────────────────────────
 let cachedRouteGeomMap: RouteGeomMap | null = null;
 let cachedGeojsonRef: unknown = null;
@@ -155,10 +181,11 @@ function computeActiveBuses(
   currentTimeSec: number,
   geomMap: RouteGeomMap,
 ): ActiveBus[] {
+  ensureTripIndex(trips);
   type Candidate = { progress: number; trip: BusTrip };
   const routeBest = new Map<string, Candidate>();
 
-  for (const trip of trips) {
+  for (const trip of getWindowTrips(currentTimeSec)) {
     const { timestamps } = trip;
     if (!timestamps.length) continue;
     const t0 = timestamps[0], t1 = timestamps[timestamps.length - 1];
@@ -239,9 +266,9 @@ export function createBusSimLayers(
       getPosition: (d) => d.position,
       getIcon: (d) => ({
         url: getBusIcon(d.color),
-        width: 100,
-        height: 100,
-        anchorY: 50,
+        width: BUS_ICON_SIZE,
+        height: BUS_ICON_SIZE,
+        anchorY: BUS_ICON_SIZE / 2,
       }),
       getSize: (d) => isSelected(d) ? 52 : 28,
       getColor: (d) => isSelected(d)
@@ -249,6 +276,7 @@ export function createBusSimLayers(
         : [255, 255, 255, baseAlpha],
       onClick: (info) => {
         if (info.object && onBusClick) onBusClick(info.object);
+        return true; // stop propagation to layers below
       },
       updateTriggers: {
         getPosition: currentTimeSec,

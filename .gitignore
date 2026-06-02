@@ -12,3 +12,6 @@ coverage
 # Valhalla routing data (large binary files)
 valhalla-data/
 
+.claude/
+
+

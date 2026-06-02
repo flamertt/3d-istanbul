@@ -3,7 +3,7 @@ import {
   Bus, Train, TrainFront, Bike, Waypoints, Zap, Trees, PersonStanding,
   Car, Navigation, Ship, GraduationCap, School, Moon, Theater,
   Binoculars, Castle, Building2, Trophy, LibraryIcon,
-  ParkingSquare, MapPin, Layers
+  ParkingSquare, MapPin, Layers, Utensils, Heart, Cable
 } from "lucide-react";
 
 function ObeliskIcon({ size = 16 }: { size?: number }) {
@@ -38,6 +38,13 @@ interface LayerControlProps {
   busSimEnabled?: boolean;
   setBusSimEnabled?: (val: boolean | ((s: boolean) => boolean)) => void;
   busSimLoading?: boolean;
+  metroSimEnabled?: boolean;
+  setMetroSimEnabled?: (val: boolean | ((s: boolean) => boolean)) => void;
+  marmaraySimEnabled?: boolean;
+  setMarmaraySimEnabled?: (val: boolean | ((s: boolean) => boolean)) => void;
+  tramSimEnabled?: boolean;
+  setTramSimEnabled?: (val: boolean | ((s: boolean) => boolean)) => void;
+  railSimLoading?: boolean;
   className?: string;
 }
 
@@ -51,11 +58,18 @@ export const LayerControl: React.FC<LayerControlProps> = ({
   busSimEnabled = false,
   setBusSimEnabled,
   busSimLoading = false,
+  metroSimEnabled = false,
+  setMetroSimEnabled,
+  marmaraySimEnabled = false,
+  setMarmaraySimEnabled,
+  tramSimEnabled = false,
+  setTramSimEnabled,
+  railSimLoading = false,
   className
 }) => {
   return (
     <Card className={cn(
-      "w-72 flex flex-col pointer-events-auto bg-background/80 backdrop-blur-md border border-border/40 shadow-lg overflow-hidden rounded-xl",
+      "w-72 flex-1 flex flex-col pointer-events-auto bg-background/80 backdrop-blur-md border border-border/40 shadow-lg overflow-hidden rounded-xl",
       className
     )}>
       {/* Başlık alanı */}
@@ -65,7 +79,7 @@ export const LayerControl: React.FC<LayerControlProps> = ({
       </div>
 
       {/* Kaydırma alanı ve Özel İnce Scrollbar Stili */}
-      <div className="flex-1 overflow-y-auto max-h-[60vh] p-2 pr-1
+      <div className="flex-1 overflow-y-auto p-2 pr-1
         [&::-webkit-scrollbar]:w-1.5
         [&::-webkit-scrollbar-track]:bg-transparent
         [&::-webkit-scrollbar-thumb]:bg-muted-foreground/20
@@ -74,56 +88,61 @@ export const LayerControl: React.FC<LayerControlProps> = ({
         [scrollbar-width:thin]
         [scrollbar-color:rgba(156,163,175,0.2)_transparent]"
       >
-        <Accordion type="multiple" defaultValue={["core", "transport"]}>
-          {/* Temel Katmanlar */}
-          <AccordionItem value="core" className="border-gray-800/50 px-2">
+        <Accordion type="multiple" defaultValue={["transit", "road", "urban"]}>
+          {/* Toplu Taşıma */}
+          <AccordionItem value="transit" className="border-gray-800/50 px-2">
             <AccordionTrigger className="text-[11px] uppercase tracking-wider text-gray-400 hover:no-underline py-3">
-              Temel Katmanlar
+              Toplu Taşıma
             </AccordionTrigger>
             <AccordionContent className="space-y-1">
-              <LayerItem
-                icon={<ParkingSquare size={16} />}
-                label="İSPARK Otoparkları"
-                checked={isparkEnabled}
-                onCheckedChange={() => setIsparkEnabled(s => !s)}
-                color="emerald"
-              />
+              <LayerItem icon={<ParkingSquare size={16} />} label="İSPARK Otoparkları" checked={isparkEnabled} onCheckedChange={() => setIsparkEnabled(s => !s)} color="emerald" />
+              <div className="h-px bg-gray-800/60 my-1" />
               {setBusSimEnabled && (
-                <LayerItem
-                  icon={<Bus size={16} />}
-                  label={busSimLoading ? "Yükleniyor…" : "Toplu Taşıma"}
-                  checked={busSimEnabled}
-                  onCheckedChange={() => setBusSimEnabled(s => !s)}
-                  color="blue"
-                />
+                <LayerItem icon={<Bus size={16} />} label={busSimLoading ? "Yükleniyor…" : "Otobüs"} checked={busSimEnabled} onCheckedChange={() => setBusSimEnabled(s => !s)} color="blue" />
               )}
-            </AccordionContent>
-          </AccordionItem>
-
-          {/* Ulaşım Katmanları */}
-          <AccordionItem value="transport" className="border-gray-800/50 px-2">
-            <AccordionTrigger className="text-[11px] uppercase tracking-wider text-gray-400 hover:no-underline py-3">
-              Toplu Taşıma & Yol
-            </AccordionTrigger>
-            <AccordionContent className="space-y-1">
-              <div className="text-[10px] text-gray-500 font-semibold px-2 py-1 uppercase tracking-tighter">Raylı Sistem & Deniz</div>
-              <LayerItem icon={<Train size={16} />} label="Raylı Hatlar" checked={overlayFlags.railLines} onCheckedChange={() => toggleFlag("railLines")} color="violet" />
+              {setMetroSimEnabled && (
+                <LayerItem icon={<TrainFront size={16} />} label={railSimLoading ? "Yükleniyor…" : "Metro"} checked={metroSimEnabled} onCheckedChange={() => setMetroSimEnabled(s => !s)} color="red" />
+              )}
+              {setMarmaraySimEnabled && (
+                <LayerItem icon={<Train size={16} />} label={railSimLoading ? "Yükleniyor…" : "Marmaray"} checked={marmaraySimEnabled} onCheckedChange={() => setMarmaraySimEnabled(s => !s)} color="indigo" />
+              )}
+              {setTramSimEnabled && (
+                <LayerItem icon={<Cable size={16} />} label={railSimLoading ? "Yükleniyor…" : "Tramvay & Füniküler"} checked={tramSimEnabled} onCheckedChange={() => setTramSimEnabled(s => !s)} color="cyan" />
+              )}
+              <div className="h-px bg-gray-800/60 my-1" />
+              <LayerItem icon={<Train size={16} />} label="Raylı Hatlar" checked={overlayFlags.railLines} onCheckedChange={() => toggleFlag("railLines")} color="amber" />
               <LayerItem icon={<TrainFront size={16} />} label="Raylı İstasyonlar" checked={overlayFlags.railStations} onCheckedChange={() => toggleFlag("railStations")} color="violet" />
-              <LayerItem icon={<Ship size={16} />} label="Deniz İstasyonları" checked={overlayFlags.seaStations} onCheckedChange={() => toggleFlag("seaStations")} color="cyan" />
-
-              <div className="text-[10px] text-gray-500 font-semibold px-2 py-1 mt-2 uppercase tracking-tighter">Otobüs & Minibüs</div>
+              <LayerItem icon={<Ship size={16} />} label="Deniz Ulaşımı" checked={overlayFlags.seaStations} onCheckedChange={() => toggleFlag("seaStations")} color="cyan" />
               <LayerItem icon={<Bus size={16} />} label="Otobüs Hatları" checked={overlayFlags.busRoutes} onCheckedChange={() => toggleFlag("busRoutes")} color="blue" />
               <LayerItem icon={<MapPin size={16} />} label="Otobüs Durakları" checked={overlayFlags.busStops} onCheckedChange={() => toggleFlag("busStops")} color="blue" />
               <LayerItem icon={<Bus size={16} className="opacity-70" />} label="Minibüs Hatları" checked={overlayFlags.minibusRoutes} onCheckedChange={() => toggleFlag("minibusRoutes")} color="teal" />
               <LayerItem icon={<MapPin size={16} className="opacity-70" />} label="Minibüs Durakları" checked={overlayFlags.minibusStops} onCheckedChange={() => toggleFlag("minibusStops")} color="teal" />
+            </AccordionContent>
+          </AccordionItem>
 
-              <div className="text-[10px] text-gray-500 font-semibold px-2 py-1 mt-2 uppercase tracking-tighter">Diğer</div>
-              <LayerItem icon={<Bike size={16} />} label="Bisiklet Yolları" checked={overlayFlags.bikeLanes} onCheckedChange={() => toggleFlag("bikeLanes")} color="teal" />
-              <LayerItem icon={<Waypoints size={16} />} label="Mikromobilite" checked={overlayFlags.micromobilityParks} onCheckedChange={() => toggleFlag("micromobilityParks")} color="orange" />
+          {/* Karayolu */}
+          <AccordionItem value="road" className="border-gray-800/50 px-2">
+            <AccordionTrigger className="text-[11px] uppercase tracking-wider text-gray-400 hover:no-underline py-3">
+              Karayolu & Ulaşım
+            </AccordionTrigger>
+            <AccordionContent className="space-y-1">
               <LayerItem icon={<Car size={16} />} label="Taksi Durakları" checked={overlayFlags.taxiStops} onCheckedChange={() => toggleFlag("taxiStops")} color="fuchsia" />
               <LayerItem icon={<Navigation size={16} />} label="Dolmuş Durakları" checked={overlayFlags.taxiDolmusStops} onCheckedChange={() => toggleFlag("taxiDolmusStops")} color="rose" />
+              <LayerItem icon={<Bike size={16} />} label="Bisiklet Yolları" checked={overlayFlags.bikeLanes} onCheckedChange={() => toggleFlag("bikeLanes")} color="teal" />
+              <LayerItem icon={<Waypoints size={16} />} label="Mikromobilite" checked={overlayFlags.micromobilityParks} onCheckedChange={() => toggleFlag("micromobilityParks")} color="orange" />
               <LayerItem icon={<Zap size={16} />} label="Şarj İstasyonları" checked={overlayFlags.evChargingStations} onCheckedChange={() => toggleFlag("evChargingStations")} color="amber" />
+            </AccordionContent>
+          </AccordionItem>
+
+          {/* Kentsel Yaşam */}
+          <AccordionItem value="urban" className="border-gray-800/50 px-2">
+            <AccordionTrigger className="text-[11px] uppercase tracking-wider text-gray-400 hover:no-underline py-3">
+              Kentsel Yaşam
+            </AccordionTrigger>
+            <AccordionContent className="space-y-1">
               <LayerItem icon={<Trees size={16} />} label="Yeşil Alanlar" checked={overlayFlags.greenAreas} onCheckedChange={() => toggleFlag("greenAreas")} color="emerald" />
+              <LayerItem icon={<Utensils size={16} />} label="Kent Lokantaları" checked={overlayFlags.kentLokantasi} onCheckedChange={() => toggleFlag("kentLokantasi")} color="amber" />
+              <LayerItem icon={<Heart size={16} />} label="Sosyal Tesisler" checked={overlayFlags.sosyalTesisler} onCheckedChange={() => toggleFlag("sosyalTesisler")} color="pink" />
               <LayerItem icon={<PersonStanding size={16} />} label="Halka Açık Tuvaletler" checked={overlayFlags.toilets} onCheckedChange={() => toggleFlag("toilets")} color="rose" />
             </AccordionContent>
           </AccordionItem>
@@ -146,7 +165,7 @@ export const LayerControl: React.FC<LayerControlProps> = ({
               <LayerItem icon={<LibraryIcon size={16} />} label="Kütüphane" checked={landmarkFlags.library} onCheckedChange={() => toggleLandmark("library")} color="lime" />
             </AccordionContent>
           </AccordionItem>
-        </Accordion> {/* <- </Accordion> buraya taşınarak tüm Item'ları sarmalaması sağlandı */}
+        </Accordion>
       </div>
     </Card>
   );

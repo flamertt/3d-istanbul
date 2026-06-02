@@ -218,6 +218,36 @@ const POI_THEMES: Record<TurkeyPoiKind, PoiTheme> = {
     extraPanelBg: "bg-blue-950/20",
     extraText: "text-blue-100",
   },
+  kent_lokantasi: {
+    label: "Kent Lokantası",
+    headerStripe: "bg-gradient-to-r from-amber-500/30 via-amber-500/10 to-transparent",
+    pillBg: "bg-amber-500/15",
+    pillText: "text-amber-200",
+    dotBg: "bg-amber-400",
+    titleText: "text-amber-100",
+    subtitleLabel: "Adres",
+    subtitlePillBg: "bg-amber-500/10",
+    subtitlePillText: "text-amber-200",
+    extraLabel: "Detay",
+    extraPanelBorder: "border-amber-500/20",
+    extraPanelBg: "bg-amber-950/20",
+    extraText: "text-amber-100",
+  },
+  sosyal_tesis: {
+    label: "Sosyal Tesis",
+    headerStripe: "bg-gradient-to-r from-pink-500/30 via-pink-500/10 to-transparent",
+    pillBg: "bg-pink-500/15",
+    pillText: "text-pink-200",
+    dotBg: "bg-pink-400",
+    titleText: "text-pink-100",
+    subtitleLabel: "Adres",
+    subtitlePillBg: "bg-pink-500/10",
+    subtitlePillText: "text-pink-200",
+    extraLabel: "Detay",
+    extraPanelBorder: "border-pink-500/20",
+    extraPanelBg: "bg-pink-950/20",
+    extraText: "text-pink-100",
+  },
 };
 
 export function PoiDetailPanel({
@@ -231,7 +261,7 @@ export function PoiDetailPanel({
   onGetDirections?: (lat: number, lng: number, mode: RouteMode) => void;
   route?: RouteState;
 }) {
-  const theme = POI_THEMES[poi.kind];
+  const theme = POI_THEMES[poi.kind] ?? POI_THEMES.bus_stop;
 
   return (
     <Card className="absolute top-0 right-0 bottom-0 z-40 w-80 flex flex-col pointer-events-auto border-l border-border/40 bg-background/95 backdrop-blur-xl shadow-2xl overflow-hidden panel-slide-in rounded-none">

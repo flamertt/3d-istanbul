@@ -17,6 +17,8 @@ export interface TurkeyOverlayFlags {
   minibusRoutes: boolean;
   minibusStops: boolean;
   seaStations: boolean;
+  kentLokantasi: boolean;
+  sosyalTesisler: boolean;
 }
 
 function useLazyFeatureCollection(url: string, enabled: boolean) {
@@ -118,6 +120,14 @@ export function useTurkeyOverlays(flags: TurkeyOverlayFlags, zoom: number) {
     "/data/turkey_overlays/sea_transport_stations.geojson",
     flags.seaStations && showPoints,
   );
+  const kentLokantasi = useLazyFeatureCollection(
+    "/data/turkey_overlays/kent_lokantasi.geojson",
+    flags.kentLokantasi && showPoints,
+  );
+  const sosyalTesisler = useLazyFeatureCollection(
+    "/data/turkey_overlays/sosyal_tesisler.geojson",
+    flags.sosyalTesisler && showPoints,
+  );
 
   return {
     busRoutes: flags.busRoutes ? busRoutes.data : null,
@@ -135,8 +145,9 @@ export function useTurkeyOverlays(flags: TurkeyOverlayFlags, zoom: number) {
     minibusRoutes: flags.minibusRoutes ? minibusRoutes.data : null,
     minibusStops: flags.minibusStops ? minibusStops.data : null,
     seaStations: flags.seaStations ? seaStations.data : null,
+    kentLokantasi: flags.kentLokantasi ? kentLokantasi.data : null,
+    sosyalTesisler: flags.sosyalTesisler ? sosyalTesisler.data : null,
 
-    // For future UI (currently not rendered).
     errors: [
       busRoutes.error,
       railLines.error,
@@ -152,6 +163,8 @@ export function useTurkeyOverlays(flags: TurkeyOverlayFlags, zoom: number) {
       minibusRoutes.error,
       minibusStops.error,
       seaStations.error,
+      kentLokantasi.error,
+      sosyalTesisler.error,
     ].filter((e): e is string => Boolean(e)),
   };
 }

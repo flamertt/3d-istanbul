@@ -1,7 +1,6 @@
-import { GeoJsonLayer, IconLayer, PolygonLayer } from "deck.gl";
+import { GeoJsonLayer, IconLayer } from "deck.gl";
 import type { Layer } from "deck.gl";
 import { POI_ICON_URLS } from "../lib/poiIcons";
-import { createCustom3DPoiLayer } from "./customMeshLayers";
 
 type FeatureCollection = GeoJSON.FeatureCollection<GeoJSON.Geometry, GeoJSON.GeoJsonProperties>;
 
@@ -18,7 +17,9 @@ export type TurkeyPoiKind =
   | "taxi_stop"
   | "taxi_dolmus_stop"
   | "minibus_stop"
-  | "sea_station";
+  | "sea_station"
+  | "kent_lokantasi"
+  | "sosyal_tesis";
 
 export interface TurkeyPoiPoint {
   kind: TurkeyPoiKind;
@@ -41,7 +42,9 @@ type PointPoiKind =
   | "taxi_stop"
   | "taxi_dolmus_stop"
   | "minibus_stop"
-  | "sea_station";
+  | "sea_station"
+  | "kent_lokantasi"
+  | "sosyal_tesis";
 
 interface PoiShapeConfig {
   sides: number;
@@ -60,6 +63,8 @@ const POI_SHAPE_CONFIG: Record<PointPoiKind, PoiShapeConfig> = {
   taxi_dolmus_stop: { sides: 6, radiusMeters: 6.6, rotationDeg: 20, elevationMeters: 46 },
   minibus_stop: { sides: 6, radiusMeters: 7.8, rotationDeg: 10, elevationMeters: 66 },
   sea_station: { sides: 5, radiusMeters: 7.4, rotationDeg: 0, elevationMeters: 58 },
+  kent_lokantasi: { sides: 4, radiusMeters: 5.5, rotationDeg: 0, elevationMeters: 44 },
+  sosyal_tesis: { sides: 4, radiusMeters: 5.5, rotationDeg: 0, elevationMeters: 44 },
 };
 
 function readFirstString(props: Properties | undefined, keys: string[]): string {
@@ -143,6 +148,16 @@ function extractMicromobilityParks(fc: FeatureCollection): TurkeyPoiPoint[] {
     subtitle: readFirstString(properties, ["Ilce", "ILCE", "Bolge", "BOLGE"]),
     extra: readFirstString(properties, ["Park_Tipi", "Park Tipi"]),
     footprint: buildFootprintForKind("micromobility_park", position),
+  }));
+}
+
+function extractSimplePoints(fc: FeatureCollection, kind: string): TurkeyPoiPoint[] {
+  return extractPointFeatures(fc).map(({ position, properties }) => ({
+    kind: kind as TurkeyPoiPoint["kind"],
+    position,
+    title: readFirstString(properties, ["name", "TESİS ADI", "Tesis Adı", "ADI"]) ?? kind,
+    subtitle: readFirstString(properties, ["address", "ADRES", "İlçe"]),
+    footprint: buildFootprintForKind("toilet", position),
   }));
 }
 
@@ -248,15 +263,15 @@ function createPoiIconLayer(
     data,
     pickable: true,
     billboard: true,
-    sizeUnits: "meters",
+    sizeUnits: "pixels",
     getIcon: () => ({
       url: iconUrl,
-      width: 112,
-      height: 112,
-      anchorY: 112,
+      width: 100,
+      height: 100,
+      anchorY: 50,
     }),
-    getPosition: (d) => [d.position[0], d.position[1], elevation + 16],
-    getSize: 56,
+    getPosition: (d) => [d.position[0], d.position[1], 0],
+    getSize: 26,
     getColor: tint,
   });
 }
@@ -279,6 +294,8 @@ export function createTurkeyOverlayLayers(
     minibusRoutes: FeatureCollection | null;
     minibusStops: FeatureCollection | null;
     seaStations: FeatureCollection | null;
+    kentLokantasi: FeatureCollection | null;
+    sosyalTesisler: FeatureCollection | null;
   },
   zoom: number,
   ui?: {
@@ -438,9 +455,9 @@ export function createTurkeyOverlayLayers(
         getLineColor: (f: unknown) => {
           const p = getFeatureProperties(f);
           const isSelected = selectedId === normalizeKeyPart(p?.["ID"] || p?.["id"] || p?.["OBJECTID"]);
-          return isSelected ? [255, 255, 255, 255] : [168, 85, 247, 180]; // Parlak mor
+          return isSelected ? [255, 255, 255, 255] : [251, 191, 36, 220]; // Parlak altın
         },
-        lineWidthMinPixels: 1,
+        lineWidthMinPixels: 2,
         getLineWidth: (f: unknown) => {
           const p = getFeatureProperties(f);
           const isSelected = selectedId === normalizeKeyPart(p?.["ID"] || p?.["id"] || p?.["OBJECTID"]);
@@ -566,13 +583,11 @@ export function createTurkeyOverlayLayers(
   if (overlays.railStations && showPoints) {
     const pts = extractRailStations(overlays.railStations);
     layers.push(createPoiIconLayer("turkey-rail-stations-icons", pts, POI_ICON_URLS.railStation, 60, [255, 255, 255, 255]));
-    layers.push(createCustom3DPoiLayer("turkey-rail-stations-3d", pts, "rail_station"));
   }
 
   if (overlays.evChargingStations && showPoints) {
     const pts = extractEvChargingStations(overlays.evChargingStations);
     layers.push(createPoiIconLayer("turkey-ev-charging-icons", pts, POI_ICON_URLS.evCharging, 50, [255, 255, 255, 255]));
-    layers.push(createCustom3DPoiLayer("turkey-ev-charging-3d", pts, "ev_charging_station"));
   }
 
   if (overlays.micromobilityParks && showPoints) {
@@ -605,6 +620,16 @@ export function createTurkeyOverlayLayers(
     const pts = extractSeaStations(overlays.seaStations);
     const elevation = POI_SHAPE_CONFIG.sea_station.elevationMeters;
     layers.push(createPoiIconLayer("turkey-sea-stations-icons", pts, POI_ICON_URLS.seaStation, elevation, [255, 255, 255, 255]));
+  }
+
+  if (overlays.kentLokantasi && showPoints) {
+    const pts = extractSimplePoints(overlays.kentLokantasi, "kent_lokantasi");
+    layers.push(createPoiIconLayer("turkey-kent-lokantasi-icons", pts, POI_ICON_URLS.kentLokantasi, 40, [255, 255, 255, 255]));
+  }
+
+  if (overlays.sosyalTesisler && showPoints) {
+    const pts = extractSimplePoints(overlays.sosyalTesisler, "sosyal_tesis");
+    layers.push(createPoiIconLayer("turkey-sosyal-tesisler-icons", pts, POI_ICON_URLS.sosyalTesis, 40, [255, 255, 255, 255]));
   }
 
   return layers;

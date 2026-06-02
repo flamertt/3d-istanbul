@@ -1,4 +1,4 @@
-import { useMemo, useState, useCallback } from "react";
+import { useMemo, useState, useCallback, useRef } from "react";
 import { PathLayer } from "@deck.gl/layers";
 import type { Layer } from "deck.gl";
 import { useMapView } from "./hooks/useMapView";
@@ -31,8 +31,12 @@ import { IstanbulClock } from "./components/IstanbulClock";
 import { useBusSim } from "./hooks/useBusSim";
 import { createBusSimLayers, getActiveBuses } from "./layers/busSimLayer";
 import { BusDetailPanel } from "./components/BusDetailPanel";
+import { RailDetailPanel } from "./components/RailDetailPanel";
 import { BusListPanel } from "./components/BusListPanel";
 import type { ActiveBus } from "./layers/busSimLayer";
+import { useRailSim } from "./hooks/useRailSim";
+import { createRailSimLayers, getActiveVehicles } from "./layers/railSimLayer";
+import type { ActiveVehicle } from "./layers/railSimLayer";
 import type { TurkeyOverlayFlags } from "./hooks/useTurkeyOverlays";
 import { useEffect } from "react";
 import type { TurkeyPoiPoint } from "./layers/turkeyOverlayLayers";
@@ -77,7 +81,7 @@ function AppIspark() {
     busRoutes: true,
     railLines: false,
     bikeLanes: false,
-    greenAreas: false,
+    greenAreas: true,
     busStops: false,
     railStations: false,
     evChargingStations: false,
@@ -88,11 +92,16 @@ function AppIspark() {
     minibusRoutes: false,
     minibusStops: false,
     seaStations: false,
-    
+    kentLokantasi: false,
+    sosyalTesisler: false,
   });
 
   const [busSimEnabled, setBusSimEnabled] = useState(true);
+  const [metroSimEnabled, setMetroSimEnabled] = useState(true);
+  const [marmaraySimEnabled, setMarmaraySimEnabled] = useState(true);
+  const [tramSimEnabled, setTramSimEnabled] = useState(false);
   const busSim = useBusSim();
+  const railSim = useRailSim();
 
   const toggleBusSim = useCallback((val: boolean | ((s: boolean) => boolean)) => {
     setBusSimEnabled((prev) => {
@@ -109,6 +118,7 @@ function AppIspark() {
   const [busPlaying, setBusPlaying] = useState(true);
   const [busSpeed, setBusSpeed] = useState(1); // 1x/5x/15x/30x
   const [selectedBus, setSelectedBus] = useState<ActiveBus | null>(null);
+  const [selectedVehicle, setSelectedVehicle] = useState<ActiveVehicle | null>(null);
 
   // Smooth animation: 50ms tick — daha akıcı hareket
   useEffect(() => {
@@ -121,6 +131,22 @@ function AppIspark() {
     }, 50);
     return () => clearInterval(id);
   }, [busSimEnabled, busPlaying, busSpeed]);
+
+  // Throttle: layer updates at 2fps (500ms), list updates at 0.5fps (2000ms)
+  const busTimeRef = useRef(busTimeSec);
+  useEffect(() => { busTimeRef.current = busTimeSec; }, [busTimeSec]);
+
+  const [layerTimeSec, setLayerTimeSec] = useState(getInitialBusSec);
+  useEffect(() => {
+    const id = setInterval(() => setLayerTimeSec(busTimeRef.current), 200);
+    return () => clearInterval(id);
+  }, []);
+
+  const [listTimeSec, setListTimeSec] = useState(getInitialBusSec);
+  useEffect(() => {
+    const id = setInterval(() => setListTimeSec(busTimeRef.current), 2000);
+    return () => clearInterval(id);
+  }, []);
 
   const handleSearchSelect = useCallback(
     (result: GeoResult) => {
@@ -188,6 +214,8 @@ function AppIspark() {
     minibusRoutes,
     minibusStops,
     seaStations,
+    kentLokantasi,
+    sosyalTesisler,
   } = turkeyOverlays;
 
   const turkeyOverlayLayers = useMemo(() => {
@@ -207,6 +235,8 @@ function AppIspark() {
         minibusRoutes,
         minibusStops,
         seaStations,
+        kentLokantasi,
+        sosyalTesisler,
       },
       viewState.zoom,
       {
@@ -230,6 +260,8 @@ function AppIspark() {
     minibusRoutes,
     minibusStops,
     seaStations,
+    kentLokantasi,
+    sosyalTesisler,
     selectedBusRouteProps,
     selectedLineId,
     viewState.zoom,
@@ -285,32 +317,67 @@ function AppIspark() {
 
   const handleBusClick = useCallback((bus: ActiveBus) => {
     setSelectedBus(bus);
+    setSelectedVehicle(null);
     setSelectedLot(null);
     setSelectedPoi(null);
     setSelectedBusRouteProps({ HAT_KODU: bus.route });
     flyTo(bus.position[0], bus.position[1], 15);
   }, [flyTo]);
 
+  const handleRailClick = useCallback((vehicle: ActiveVehicle) => {
+    setSelectedVehicle(vehicle);
+    setSelectedBus(null);
+    setSelectedLot(null);
+    setSelectedPoi(null);
+    setSelectedBusRouteProps(null);
+    flyTo(vehicle.position[0], vehicle.position[1], 14);
+  }, [flyTo]);
+
   const busSimLayers = useMemo(() => {
     if (!busSimEnabled || !busSim.data) return [];
     return createBusSimLayers(
       busSim.data.trips,
-      busTimeSec,
+      layerTimeSec,
       busRoutes ?? undefined,
       handleBusClick,
       viewState.zoom,
       selectedBus,
     );
-  }, [busSimEnabled, busSim.data, busTimeSec, busRoutes, viewState.zoom, handleBusClick, selectedBus]);
+  }, [busSimEnabled, busSim.data, layerTimeSec, busRoutes, viewState.zoom, handleBusClick, selectedBus]);
 
   const activeBuses = useMemo(() => {
     if (!busSimEnabled || !busSim.data) return [];
-    return getActiveBuses(busSim.data.trips, busTimeSec, busRoutes ?? undefined);
-  }, [busSimEnabled, busSim.data, busTimeSec, busRoutes]);
+    return getActiveBuses(busSim.data.trips, listTimeSec, busRoutes ?? undefined);
+  }, [busSimEnabled, busSim.data, listTimeSec, busRoutes]);
+
+  const railFilter = useCallback((kind: string) => {
+    if (kind === "metro" || kind === "funicular") return metroSimEnabled;
+    if (kind === "marmaray") return marmaraySimEnabled;
+    if (kind === "tram") return tramSimEnabled;
+    return false;
+  }, [metroSimEnabled, marmaraySimEnabled, tramSimEnabled]);
+
+  const activeRailVehicles = useMemo((): ActiveVehicle[] => {
+    if (!railSim.data) return [];
+    return getActiveVehicles(railSim.data, listTimeSec, railFilter);
+  }, [railSim.data, listTimeSec, railFilter]);
+
+  const railSimLayers = useMemo(() => {
+    if (!railSim.data) return [];
+    const anyEnabled = metroSimEnabled || marmaraySimEnabled || tramSimEnabled;
+    if (!anyEnabled) return [];
+    return createRailSimLayers(
+      railSim.data,
+      layerTimeSec,
+      railFilter,
+      handleRailClick,
+      viewState.zoom,
+      selectedVehicle,
+    );
+  }, [railSim.data, layerTimeSec, railFilter, handleRailClick, viewState.zoom, selectedVehicle, metroSimEnabled, marmaraySimEnabled, tramSimEnabled]);
 
   const extraLayers = useMemo(
     () => {
-      // Icons ("…-icons", "…-3d") her zaman line/polygon katmanlarının üstünde olmalı
       const lineLayers = turkeyOverlayLayers.filter(
         (l) => !l.id.endsWith("-icons") && !l.id.endsWith("-3d"),
       );
@@ -324,9 +391,10 @@ function AppIspark() {
         ...iconLayers,
         ...(landmarkLayer ? [landmarkLayer] : []),
         ...busSimLayers,
+        ...railSimLayers,
       ];
     },
-    [radiusLayers, turkeyOverlayLayers, routeLayers, landmarkLayer, busSimLayers],
+    [radiusLayers, turkeyOverlayLayers, routeLayers, landmarkLayer, busSimLayers, railSimLayers],
   );
 
   const lots = isparkEnabled ? ispark.lots : [];
@@ -380,11 +448,11 @@ function AppIspark() {
       )}
 
       {/* Sol sütun: Logo + LayerControl aynı genişlikte */}
-      <div className="absolute top-6 left-6 z-20 flex flex-col gap-3 pointer-events-none">
+      <div className="absolute top-6 left-6 z-20 flex flex-col gap-3 pointer-events-none" style={{ maxHeight: "calc(100vh - 8rem)" }}>
         <div className="pointer-events-auto">
           <Header />
         </div>
-        <div className="pointer-events-auto">
+        <div className="pointer-events-auto flex-1 min-h-0 flex flex-col overflow-hidden">
         <LayerControl
           isparkEnabled={isparkEnabled}
           setIsparkEnabled={setIsparkEnabled}
@@ -395,6 +463,13 @@ function AppIspark() {
           busSimEnabled={busSimEnabled}
           setBusSimEnabled={toggleBusSim}
           busSimLoading={busSim.loading}
+          metroSimEnabled={metroSimEnabled}
+          setMetroSimEnabled={setMetroSimEnabled}
+          marmaraySimEnabled={marmaraySimEnabled}
+          setMarmaraySimEnabled={setMarmaraySimEnabled}
+          tramSimEnabled={tramSimEnabled}
+          setTramSimEnabled={setTramSimEnabled}
+          railSimLoading={railSim.loading}
         />
         </div>
       </div>
@@ -462,11 +537,14 @@ function AppIspark() {
         />
       )}
 
-      {busSimEnabled && (
+      {(busSimEnabled || metroSimEnabled || marmaraySimEnabled) && (
         <BusListPanel
           buses={activeBuses}
+          railVehicles={activeRailVehicles}
           selectedBus={selectedBus}
+          selectedVehicle={selectedVehicle}
           onBusClick={handleBusClick}
+          onRailClick={handleRailClick}
         />
       )}
 
@@ -479,6 +557,14 @@ function AppIspark() {
           bus={selectedBus}
           currentTimeSec={busTimeSec}
           onClose={() => { setSelectedBus(null); setSelectedBusRouteProps(null); }}
+        />
+      )}
+
+      {selectedVehicle && !selectedBus && (
+        <RailDetailPanel
+          vehicle={selectedVehicle}
+          currentTimeSec={busTimeSec}
+          onClose={() => setSelectedVehicle(null)}
         />
       )}
 

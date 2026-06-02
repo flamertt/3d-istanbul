@@ -117,7 +117,7 @@ export function createIsparkLayers(lots: IsparkLot[], zoom: number): Layer[] {
         height: 100,
         anchorY: 50,
       }),
-      getSize: 28,
+      getSize: 20,
       getColor: [255, 255, 255],
       updateTriggers: { getPosition: zoom },
     }),
