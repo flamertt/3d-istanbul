@@ -1,5 +1,6 @@
 import { useMemo, useState, useCallback, useRef, useEffect } from "react";
 import { PathLayer } from "@deck.gl/layers";
+import { PathStyleExtension } from "@deck.gl/extensions";
 import type { Layer } from "deck.gl";
 import { useMapView } from "./hooks/useMapView";
 import { useIsparkLots } from "./hooks/useIsparkLots";
@@ -36,7 +37,7 @@ import { RailDetailPanel } from "./components/RailDetailPanel";
 import { BusListPanel } from "./components/BusListPanel";
 import type { ActiveBus } from "./layers/busSimLayer";
 import { useRailSim } from "./hooks/useRailSim";
-import { createRailSimLayers, getActiveVehicles } from "./layers/railSimLayer";
+import { createRailSimLayers, createFerryRouteLayers, createRailSelectedRouteLayers, getActiveVehicles } from "./layers/railSimLayer";
 import type { ActiveVehicle } from "./layers/railSimLayer";
 import type { TurkeyOverlayFlags } from "./hooks/useTurkeyOverlays";
 import { getViewportBounds, type Bounds } from "./lib/viewportBounds";
@@ -92,7 +93,7 @@ function AppIspark() {
     taxiDolmusStops: false,
     minibusRoutes: false,
     minibusStops: false,
-    seaStations: false,
+    seaStations: true,
     kentLokantasi: false,
     sosyalTesisler: false,
   });
@@ -352,6 +353,40 @@ function AppIspark() {
      Math.round(viewState.latitude * 100) / 100]
   );
 
+  // Seçili otobüsün hattını çiz — busRoutes kapalı olsa bile göster
+  const selectedBusRouteLayers = useMemo((): Layer[] => {
+    if (!selectedBus || !busRoutesGeom) return [];
+    const hatKodu = selectedBus.route;
+    const features = busRoutesGeom.features.filter(
+      (f) => {
+        const k = f.properties?.HAT_KODU as string | undefined;
+        return k && k.trim() === hatKodu;
+      }
+    );
+    if (!features.length) return [];
+    const paths = features.flatMap((f) => {
+      const g = f.geometry;
+      if (g.type === "LineString") return [g.coordinates as [number,number][]];
+      if (g.type === "MultiLineString") return g.coordinates as [number,number][][];
+      return [];
+    });
+    return [
+      new PathLayer({
+        id: "selected-bus-route-line",
+        data: paths,
+        getPath: (d) => d,
+        getColor: [37, 99, 235, 200],  // mavi
+        getWidth: 3,
+        widthUnits: "pixels",
+        widthMinPixels: 2,
+        getDashArray: [10, 4],
+        dashJustified: true,
+        extensions: [new PathStyleExtension({ dash: true })],
+        updateTriggers: { data: hatKodu },
+      }),
+    ];
+  }, [selectedBus, busRoutesGeom]);
+
   const busSimLayers = useMemo(() => {
     if (!busSimEnabled || !busSim.data) return [];
     return createBusSimLayers(
@@ -408,15 +443,19 @@ function AppIspark() {
     if (!railSim.data) return [];
     const anyEnabled = metroSimEnabled || marmaraySimEnabled || tramSimEnabled || ferrySimEnabled;
     if (!anyEnabled) return [];
-    return createRailSimLayers(
-      railSim.data,
-      layerTimeSec,
-      railFilter,
-      handleRailClick,
-      viewState.zoom,
-      selectedVehicle,
-      bounds,
-    );
+    return [
+      ...createFerryRouteLayers(railSim.data, ferrySimEnabled, selectedVehicle),
+      ...createRailSelectedRouteLayers(railSim.data, selectedVehicle),
+      ...createRailSimLayers(
+        railSim.data,
+        layerTimeSec,
+        railFilter,
+        handleRailClick,
+        viewState.zoom,
+        selectedVehicle,
+        bounds,
+      ),
+    ];
   }, [railSim.data, layerTimeSec, railFilter, handleRailClick, viewState.zoom, selectedVehicle, bounds, metroSimEnabled, marmaraySimEnabled, tramSimEnabled, ferrySimEnabled]);
 
   const extraLayers = useMemo(
@@ -437,11 +476,12 @@ function AppIspark() {
         ...routeLayers,
         ...iconLayers,
         ...(landmarkLayer ? [landmarkLayer] : []),
+        ...selectedBusRouteLayers,  // seçili otobüs hattı
         ...busSimLayers,
         ...railSimLayers,
       ];
     },
-    [radiusLayers, turkeyOverlayLayers, routeLayers, landmarkLayer, busSimLayers, railSimLayers],
+    [radiusLayers, turkeyOverlayLayers, routeLayers, landmarkLayer, selectedBusRouteLayers, busSimLayers, railSimLayers],
   );
 
   const lots = isparkEnabled ? ispark.lots : [];

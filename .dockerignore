@@ -1,0 +1,6 @@
+node_modules
+dist
+.git
+.claude
+valhalla-data
+pipeline/gtfs_stop_times.zip

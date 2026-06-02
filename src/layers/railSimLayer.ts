@@ -1,4 +1,5 @@
-import { IconLayer } from "@deck.gl/layers";
+import { IconLayer, PathLayer } from "@deck.gl/layers";
+import { PathStyleExtension } from "@deck.gl/extensions";
 import type { Layer } from "deck.gl";
 import type { RailRoute, RailSimData } from "../hooks/useRailSim";
 import { buildCircleIcon, buildArrowIcon, computeHeading, ICON_PATHS } from "../lib/iconBuilder";
@@ -104,6 +105,93 @@ export function getActiveVehicles(
   }
 
   return active;
+}
+
+// ── Rail route lines (ferry / metro / marmaray) ────────────────────────────────
+type RouteLineEntry = { rk: string; name: string; path: Coord[]; kind: string };
+
+const routeLinesCache = new Map<string, RouteLineEntry[]>(); // kind → entries
+let routeLineDataRef: RailSimData | null = null;
+
+function getRouteLines(data: RailSimData, kind: string): RouteLineEntry[] {
+  if (data !== routeLineDataRef) {
+    routeLinesCache.clear();
+    routeLineDataRef = data;
+  }
+  if (routeLinesCache.has(kind)) return routeLinesCache.get(kind)!;
+  const seen = new Set<string>();
+  const result = Object.entries(data.routes)
+    .filter(([rk, r]) => r.kind === kind && rk.endsWith("|0"))
+    .filter(([, r]) => { if (seen.has(r.name)) return false; seen.add(r.name); return true; })
+    .map(([rk, r]) => ({ rk, name: r.name, path: r.path, kind: r.kind }));
+  routeLinesCache.set(kind, result);
+  return result;
+}
+
+export function createFerryRouteLayers(
+  data: RailSimData,
+  ferryEnabled: boolean,
+  selectedVehicle?: ActiveVehicle | null,
+): Layer[] {
+  if (!ferryEnabled) return [];
+  const lines = getRouteLines(data, "ferry");
+  if (!lines.length) return [];
+
+  // Seçili vapur varsa sadece onu göster, diğerleri kaybolsun
+  const selectedName = selectedVehicle?.kind === "ferry" ? selectedVehicle.name : null;
+  const visible = selectedName ? lines.filter((l) => l.name === selectedName) : lines;
+  if (!visible.length) return [];
+
+  return [
+    new PathLayer({
+      id: "ferry-route-lines",
+      data: visible,
+      pickable: false,
+      getPath: (d) => d.path as unknown as number[][],
+      getColor: selectedName ? [14, 116, 144, 220] : [14, 116, 144, 100],
+      getWidth: selectedName ? 3 : 2,
+      widthUnits: "pixels",
+      widthMinPixels: 1,
+      getDashArray: [8, 5],
+      dashJustified: true,
+      extensions: [new PathStyleExtension({ dash: true })],
+      updateTriggers: { getColor: selectedName, getWidth: selectedName, data: selectedName },
+    }),
+  ];
+}
+
+export function createRailSelectedRouteLayers(
+  data: RailSimData,
+  selectedVehicle: ActiveVehicle | null,
+): Layer[] {
+  if (!selectedVehicle) return [];
+  const { kind, name } = selectedVehicle;
+  if (kind !== "metro" && kind !== "marmaray" && kind !== "funicular" && kind !== "tram") return [];
+
+  const lines = getRouteLines(data, kind).filter((l) => l.name === name);
+  if (!lines.length) return [];
+
+  const color: [number, number, number, number] =
+    kind === "metro" ? [234, 179, 8, 220] :
+    kind === "marmaray" ? [220, 38, 38, 220] :
+    [8, 145, 178, 220];
+
+  return [
+    new PathLayer({
+      id: "rail-selected-route-line",
+      data: lines,
+      pickable: false,
+      getPath: (d) => d.path as unknown as number[][],
+      getColor: color,
+      getWidth: 3,
+      widthUnits: "pixels",
+      widthMinPixels: 2,
+      getDashArray: [10, 4],
+      dashJustified: true,
+      extensions: [new PathStyleExtension({ dash: true })],
+      updateTriggers: { data: `${name}|${kind}` },
+    }),
+  ];
 }
 
 // ── Layer builder ──────────────────────────────────────────────────────────────

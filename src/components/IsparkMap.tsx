@@ -92,6 +92,10 @@ export function IsparkMap({
   };
 
 
+  // Her zaman güncel greenAreasData'ya erişmek için ref
+  const greenAreasRef = useRef(greenAreasData);
+  useEffect(() => { greenAreasRef.current = greenAreasData; }, [greenAreasData]);
+
   const handleMapLoad = useCallback((e: { target: { getStyle: () => { sources: Record<string, unknown>; layers: { id: string; type: string }[] }; addSource: (id: string, src: object) => void; addLayer: (layer: object, beforeId?: string) => void } }) => {
     const map = e.target;
     const style = map.getStyle();
@@ -99,10 +103,10 @@ export function IsparkMap({
     const isLight = !mapStyleUrl.includes("dark");
     const firstSymbol = style.layers.find((l) => l.type === "symbol")?.id;
 
-    // 1) Yeşil alanlar — 3D binaların ALTINDA, label'ların altında
+    // 1) Yeşil alanlar — veri zaten geldiyse hemen ekle, yoksa boş başlat
     map.addSource("green-areas-src", {
       type: "geojson",
-      data: { type: "FeatureCollection", features: [] } as GeoJSON.FeatureCollection,
+      data: (greenAreasRef.current ?? { type: "FeatureCollection", features: [] }) as GeoJSON.FeatureCollection,
     });
     map.addLayer({
       id: "green-areas-fill",
@@ -128,6 +132,25 @@ export function IsparkMap({
         "fill-extrusion-opacity": 1.0,
       },
     }, firstSymbol);
+
+    // 3) Green areas click — map yüklendikten sonra ekle (timing fix)
+    const canvas = (map as unknown as { getCanvas: () => HTMLElement }).getCanvas();
+    (map as unknown as { on: (event: string, layer: string, handler: (e: unknown) => void) => void })
+      .on("click", "green-areas-fill", (e: unknown) => {
+        const ev = e as { lngLat: { lng: number; lat: number }; features?: { properties: Record<string, unknown> }[] };
+        const props = ev.features?.[0]?.properties ?? {};
+        onPoiClickRef.current?.({
+          kind: "green_area",
+          position: [ev.lngLat.lng, ev.lngLat.lat],
+          title: String(props["AD"] ?? props["ADI"] ?? props["Name"] ?? "Yeşil Alan"),
+          subtitle: String(props["TURU"] ?? props["TİPİ"] ?? ""),
+          footprint: [],
+        });
+      });
+    (map as unknown as { on: (event: string, layer: string, handler: () => void) => void })
+      .on("mouseenter", "green-areas-fill", () => { canvas.style.cursor = "pointer"; });
+    (map as unknown as { on: (event: string, layer: string, handler: () => void) => void })
+      .on("mouseleave", "green-areas-fill", () => { canvas.style.cursor = ""; });
   }, [mapStyleUrl]);
 
   // Yeşil alan verisi değiştiğinde MapLibre source'u güncelle
@@ -139,28 +162,9 @@ export function IsparkMap({
     src.setData(greenAreasData ?? { type: "FeatureCollection", features: [] });
   }, [greenAreasData]);
 
-  // Green areas MapLibre tıklama handler
-  useEffect(() => {
-    const ml = mapRef.current?.getMap();
-    if (!ml || !onPoiClick) return;
-    const handler = (e: { lngLat: { lng: number; lat: number }; features?: { properties: Record<string, unknown> }[] }) => {
-      const props = e.features?.[0]?.properties ?? {};
-      onPoiClick({
-        kind: "green_area",
-        position: [e.lngLat.lng, e.lngLat.lat],
-        title: String(props["AD"] ?? props["ADI"] ?? props["Name"] ?? "Yeşil Alan"),
-        subtitle: String(props["TURU"] ?? props["TİPİ"] ?? ""),
-        footprint: [],
-      });
-    };
-    ml.on("click", "green-areas-fill", handler);
-    ml.on("mouseenter", "green-areas-fill", () => { ml.getCanvas().style.cursor = "pointer"; });
-    ml.on("mouseleave", "green-areas-fill", () => { ml.getCanvas().style.cursor = ""; });
-    return () => {
-      ml.off("click", "green-areas-fill", handler);
-    };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [onPoiClick]);
+  // onPoiClick ref — handleMapLoad'da closure stale olmasın
+  const onPoiClickRef = useRef(onPoiClick);
+  useEffect(() => { onPoiClickRef.current = onPoiClick; }, [onPoiClick]);
 
   return (
     <div className="w-full h-full" onContextMenu={(e) => e.preventDefault()}>
