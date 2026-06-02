@@ -1,6 +1,5 @@
 # Auto detect text files and perform LF normalization
 * text=auto
-
 # ── Git LFS — büyük veri dosyaları ──────────────────────────────────────────
 # public/datas/ — ham kaynak veriler (245MB İETT hat verisi dahil)
 public/datas/* filter=lfs diff=lfs merge=lfs -text
