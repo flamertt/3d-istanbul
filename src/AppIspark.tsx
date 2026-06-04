@@ -104,6 +104,7 @@ function AppIspark() {
 
   const [buildingRings, setBuildingRings] = useState<[number, number][][]>([]);
   const [appReady, setAppReady] = useState(false);
+  const [mapReady, setMapReady] = useState(false);
 
   const [busSimEnabled, setBusSimEnabled] = useState(true);
   const [metroSimEnabled, setMetroSimEnabled] = useState(true);
@@ -242,10 +243,12 @@ function AppIspark() {
     [greenAreasData, buildingRings, overlayFlags.greenAreas],
   );
 
-  // greenAreasData yüklenip treePoints hesaplandıktan sonra loading screen'i kapat
+  // Tüm kritik veriler ve harita hazır olunca loading screen'i kapat
   useEffect(() => {
-    if (!appReady && greenAreasData !== null) setAppReady(true);
-  }, [greenAreasData, appReady]);
+    if (appReady) return;
+    const dataReady = !ispark.loading && !busSim.loading && !railSim.loading && greenAreasData !== null;
+    if (mapReady && dataReady) setAppReady(true);
+  }, [appReady, mapReady, ispark.loading, busSim.loading, railSim.loading, greenAreasData]);
 
   const turkeyOverlayLayers = useMemo(() => {
     return createTurkeyOverlayLayers(
@@ -761,6 +764,7 @@ function AppIspark() {
         greenAreasData={overlayFlags.greenAreas ? greenAreasData : null}
         onBuildingRings={setBuildingRings}
         treePoints={overlayFlags.greenAreas ? treePoints : []}
+        onMapReady={() => setMapReady(true)}
         />
 
     </div>

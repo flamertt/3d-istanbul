@@ -25,6 +25,7 @@ interface IsparkMapProps {
   bridges3dEnabled?: boolean;
   onBuildingRings?: (rings: [number, number][][]) => void;
   treePoints?: TreePoint[];
+  onMapReady?: () => void;
 }
 
 function isIsparkLot(obj: unknown): obj is IsparkLot {
@@ -47,6 +48,7 @@ export function IsparkMap({
   mapStyleUrl,
   onBuildingRings,
   treePoints = [],
+  onMapReady,
 }: IsparkMapProps) {
   const zoom = viewState.zoom;
   const mapRef = useRef<MapRef>(null);
@@ -187,6 +189,9 @@ export function IsparkMap({
       if (rings.length > 0) onBuildingRingsRef.current?.(rings);
     };
     (map as unknown as { on: (e: string, fn: () => void) => void }).on("idle", onIdle);
+
+    // Harita hazır — loading screen'i kaldır
+    onMapReadyRef.current?.();
   }, [mapStyleUrl]);
 
   // Yeşil alan verisi değiştiğinde MapLibre source'u güncelle
@@ -204,6 +209,9 @@ export function IsparkMap({
 
   const onBuildingRingsRef = useRef(onBuildingRings);
   useEffect(() => { onBuildingRingsRef.current = onBuildingRings; }, [onBuildingRings]);
+
+  const onMapReadyRef = useRef(onMapReady);
+  useEffect(() => { onMapReadyRef.current = onMapReady; }, [onMapReady]);
 
   // Three.js tree layer
   const treePointsRef = useRef(treePoints);
