@@ -6,6 +6,8 @@ import { useCallback, useMemo, useRef, useEffect } from "react";
 import type { IsparkLot } from "../types";
 import type { TurkeyPoiPoint } from "../layers/turkeyOverlayLayers";
 import { createIsparkLayers } from "../layers/isparkLayers";
+import { createGreenTreesThreeLayer } from "../layers/greenTreesThreeLayer";
+import type { TreePoint } from "../layers/greenAreaTreesLayer";
 
 type FeatureCollection = GeoJSON.FeatureCollection<GeoJSON.Geometry, GeoJSON.GeoJsonProperties>;
 
@@ -21,6 +23,8 @@ interface IsparkMapProps {
   mapStyleUrl: string;
   greenAreasData?: FeatureCollection | null;
   bridges3dEnabled?: boolean;
+  onBuildingRings?: (rings: [number, number][][]) => void;
+  treePoints?: TreePoint[];
 }
 
 function isIsparkLot(obj: unknown): obj is IsparkLot {
@@ -41,6 +45,8 @@ export function IsparkMap({
   onClearSelection,
   extraLayers,
   mapStyleUrl,
+  onBuildingRings,
+  treePoints = [],
 }: IsparkMapProps) {
   const zoom = viewState.zoom;
   const mapRef = useRef<MapRef>(null);
@@ -154,6 +160,33 @@ export function IsparkMap({
       .on("mouseenter", "green-areas-fill", () => { canvas.style.cursor = "pointer"; });
     (map as unknown as { on: (event: string, layer: string, handler: () => void) => void })
       .on("mouseleave", "green-areas-fill", () => { canvas.style.cursor = ""; });
+
+    // Tile yükleme tamamlanınca bina poligonlarını çek — ağaç filtreleme için
+    // Three.js ağaç layer'ı — MapLibre'nin kendi GL context'ini kullanır
+    const treeLayer = createGreenTreesThreeLayer(treePointsRef.current);
+    treeLayerRef.current = treeLayer;
+    (map as unknown as { addLayer: (l: object) => void }).addLayer(treeLayer);
+
+    const onIdle = () => {
+      (map as unknown as { off: (e: string, fn: () => void) => void }).off("idle", onIdle);
+      const features = (map as unknown as {
+        querySourceFeatures: (s: string, o: { sourceLayer: string }) => { geometry: { type: string; coordinates: unknown } }[];
+      }).querySourceFeatures(source, { sourceLayer: "building" });
+
+      const rings: [number, number][][] = [];
+      for (const f of features) {
+        const geom = f.geometry;
+        if (geom.type === "Polygon") {
+          rings.push((geom.coordinates as [number, number][][])[0]);
+        } else if (geom.type === "MultiPolygon") {
+          for (const poly of geom.coordinates as [number, number][][][]) {
+            rings.push(poly[0]);
+          }
+        }
+      }
+      if (rings.length > 0) onBuildingRingsRef.current?.(rings);
+    };
+    (map as unknown as { on: (e: string, fn: () => void) => void }).on("idle", onIdle);
   }, [mapStyleUrl]);
 
   // Yeşil alan verisi değiştiğinde MapLibre source'u güncelle
@@ -169,9 +202,23 @@ export function IsparkMap({
   const onPoiClickRef = useRef(onPoiClick);
   useEffect(() => { onPoiClickRef.current = onPoiClick; }, [onPoiClick]);
 
+  const onBuildingRingsRef = useRef(onBuildingRings);
+  useEffect(() => { onBuildingRingsRef.current = onBuildingRings; }, [onBuildingRings]);
+
+  // Three.js tree layer
+  const treePointsRef = useRef(treePoints);
+  useEffect(() => { treePointsRef.current = treePoints; }, [treePoints]);
+  const treeLayerRef = useRef<ReturnType<typeof createGreenTreesThreeLayer> | null>(null);
+
+  // treePoints değişince Three.js layer'ı güncelle
+  useEffect(() => {
+    treeLayerRef.current?.setPoints(treePoints);
+  }, [treePoints]);
+
   return (
     <div className="w-full h-full" onContextMenu={(e) => e.preventDefault()}>
       <DeckGL
+        key={mapStyleUrl}
         viewState={viewState}
         onViewStateChange={({ viewState: vs }) => onViewStateChange(vs as MapViewState)}
         layers={layers}

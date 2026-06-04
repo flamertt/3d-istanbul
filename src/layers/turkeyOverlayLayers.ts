@@ -266,6 +266,7 @@ function createPoiIconLayer(
   iconUrl: string,
   elevation: number,
   tint: RgbaColor,
+  size = 26,
 ): Layer {
   return new IconLayer<TurkeyPoiPoint>({
     id,
@@ -280,7 +281,7 @@ function createPoiIconLayer(
       anchorY: 50,
     }),
     getPosition: (d) => [d.position[0], d.position[1], 0],
-    getSize: 26,
+    getSize: size,
     getColor: tint,
   });
 }
@@ -631,7 +632,7 @@ export function createTurkeyOverlayLayers(
   if (overlays.seaStations && showMajorPoints) {
     const pts = cached(overlays.seaStations, extractSeaStations);
     const elevation = POI_SHAPE_CONFIG.sea_station.elevationMeters;
-    layers.push(createPoiIconLayer("turkey-sea-stations-icons", pts, POI_ICON_URLS.seaStation, elevation, [255, 255, 255, 255]));
+    layers.push(createPoiIconLayer("turkey-sea-stations-icons", pts, POI_ICON_URLS.seaStation, elevation, [255, 255, 255, 255], 18));
   }
 
   if (overlays.kentLokantasi && showPoints) {

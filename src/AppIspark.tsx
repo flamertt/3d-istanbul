@@ -39,6 +39,8 @@ import type { ActiveBus } from "./layers/busSimLayer";
 import { useRailSim } from "./hooks/useRailSim";
 import { createRailSimLayers, createFerryRouteLayers, createRailSelectedRouteLayers, getActiveVehicles } from "./layers/railSimLayer";
 import { createBridgeScenegraphLayers } from "./layers/scenegraphBridges";
+import { computeTreePoints } from "./layers/greenAreaTreesLayer";
+import { LoadingScreen } from "./components/LoadingScreen";
 import type { ActiveVehicle } from "./layers/railSimLayer";
 import type { TurkeyOverlayFlags } from "./hooks/useTurkeyOverlays";
 import { getViewportBounds, type Bounds } from "./lib/viewportBounds";
@@ -99,6 +101,9 @@ function AppIspark() {
     kentLokantasi: false,
     sosyalTesisler: false,
   });
+
+  const [buildingRings, setBuildingRings] = useState<[number, number][][]>([]);
+  const [appReady, setAppReady] = useState(false);
 
   const [busSimEnabled, setBusSimEnabled] = useState(true);
   const [metroSimEnabled, setMetroSimEnabled] = useState(true);
@@ -231,6 +236,16 @@ function AppIspark() {
     kentLokantasi,
     sosyalTesisler,
   } = turkeyOverlays;
+
+  const treePoints = useMemo(
+    () => computeTreePoints(overlayFlags.greenAreas ? (greenAreasData ?? null) : null, buildingRings),
+    [greenAreasData, buildingRings, overlayFlags.greenAreas],
+  );
+
+  // greenAreasData yüklenip treePoints hesaplandıktan sonra loading screen'i kapat
+  useEffect(() => {
+    if (!appReady && greenAreasData !== null) setAppReady(true);
+  }, [greenAreasData, appReady]);
 
   const turkeyOverlayLayers = useMemo(() => {
     return createTurkeyOverlayLayers(
@@ -541,6 +556,7 @@ function AppIspark() {
 
   return (
     <div className="relative h-screen w-screen overflow-hidden bg-gray-950">
+      <LoadingScreen visible={!appReady} />
       {(ispark.loading || turkeyOverlays.errors.length > 0) && (
         <div className="absolute inset-0 z-40 pointer-events-none">
           <div className="absolute top-0 left-0 right-0 p-3">
@@ -743,6 +759,8 @@ function AppIspark() {
         extraLayers={extraLayers}
         mapStyleUrl={mapStyleUrl}
         greenAreasData={overlayFlags.greenAreas ? greenAreasData : null}
+        onBuildingRings={setBuildingRings}
+        treePoints={overlayFlags.greenAreas ? treePoints : []}
         />
 
     </div>

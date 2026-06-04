@@ -237,7 +237,11 @@ export function createRailSimLayers(
         height: 100,
         anchorY: 50,
       }),
-      getSize: (d) => d.routeKey === selectedKey ? 56 : 32,
+      getSize: (d) => {
+        const isSel = d.routeKey === selectedKey;
+        if (d.kind === "ferry") return isSel ? 38 : 20;
+        return isSel ? 56 : 32;
+      },
       getColor: (d) => d.routeKey === selectedKey
         ? [255, 255, 255, 255]
         : [255, 255, 255, baseAlpha],
@@ -263,7 +267,11 @@ export function createRailSimLayers(
         const col = kindColor[d.kind] ?? "#ffffff";
         return { url: buildArrowIcon(col), width: 40, height: 40, anchorY: 40 };
       },
-      getSize: (d) => d.routeKey === selectedKey ? 30 : 20,
+      getSize: (d) => {
+        const isSel = d.routeKey === selectedKey;
+        if (d.kind === "ferry") return isSel ? 18 : 11;
+        return isSel ? 30 : 20;
+      },
       getAngle: (d) => -d.heading,
       getColor: (d) => [255, 255, 255, d.routeKey === selectedKey ? 255 : Math.min(255, baseAlpha + 40)],
       updateTriggers: {
